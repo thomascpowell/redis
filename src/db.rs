@@ -19,10 +19,12 @@ impl DB {
 
     pub fn get_value(&mut self, key: &str) -> Option<&Value> {
         let entry = self.get_entry(key)?;
-        if let Some(expiry) = entry.expires_at && expiry < Instant::now(){
-            return None
+        if let Some(expiry) = entry.expires_at
+            && expiry < Instant::now()
+        {
+            return None;
         }
-        return Some(&entry.value)
+        return Some(&entry.value);
     }
 
     pub fn get_entry(&mut self, key: &str) -> Option<&mut Entry> {
