@@ -21,5 +21,3 @@ pub fn parse(command: &str) -> Option<Command> {
         _ => None,
     }
 }
-
-

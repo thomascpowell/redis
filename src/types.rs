@@ -1,4 +1,8 @@
-use std::time::Instant;
+use std::{
+    collections::VecDeque,
+    sync::{Condvar, Mutex},
+    time::Instant,
+};
 
 #[derive(Clone, Debug)]
 pub enum Value {
@@ -30,3 +34,37 @@ pub enum Command<'a> {
     },
 }
 
+pub struct Queue<T> {
+    inner: Mutex<VecDeque<T>>,
+    cvar: Condvar,
+}
+
+impl<T> Queue<T> {
+    pub fn new() -> Self {
+        Queue {
+            inner: Mutex::new(VecDeque::new()),
+            cvar: Condvar::new(),
+        }
+    }
+
+    pub fn push(&self, item: T) {
+        let mut queue = self.inner.lock().unwrap();
+        queue.push_back(item);
+        self.cvar.notify_one();
+    }
+
+    pub fn pop(&self) -> Option<T> {
+        let mut queue = self.inner.lock().unwrap();
+        queue.pop_front()
+    }
+
+    pub fn wait_pop(&self) -> T {
+        let mut queue = self.inner.lock().unwrap();
+        loop {
+            if let Some(item) = queue.pop_front() {
+                return item;
+            }
+            queue = self.cvar.wait(queue).unwrap();
+        }
+    }
+}

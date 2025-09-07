@@ -4,7 +4,4 @@ mod command;
 
 fn main() {
     
-    // need threads, mutex stuff
-
-
 }
