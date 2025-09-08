@@ -32,6 +32,8 @@ pub enum Command<'a> {
     Del {
         key: &'a str,
     },
+    // TODO: add bool and int specific commands
+    // then add to parse
 }
 
 pub struct Queue<T> {
@@ -76,7 +78,7 @@ pub enum ExecuteError {
 
 pub enum RESPValue {
     Simple(String),
-    Error(String),
+    Err(String),
     Integer(i64),
     Boolean(bool),
 }
@@ -84,11 +86,10 @@ pub enum RESPValue {
 impl RESPValue {
     pub fn to_resp(&self) -> String {
         match self {
-            RESPValue::Simple(s) => format!("+{}\r\n", s),
-            RESPValue::Error(e) => format!("-{}\r\n", e),
-            RESPValue::Integer(i) => format!(":{}\r\n", i),
-            RESPValue::Boolean(b) => format!("#{}\r\n", if *b {"t"} else {"f"}),
+            RESPValue::Simple(s) => format!("+{}\r\n", s), // Generic return value
+            RESPValue::Err(e) => format!("-{}\r\n", e),    // Returned if error internally
+            RESPValue::Integer(i) => format!(":{}\r\n", i), // Returned after INCR/DECR
+            RESPValue::Boolean(b) => format!("#{}\r\n", if *b { "t" } else { "f" }), // Returned after toggle
         }
     }
 }
-

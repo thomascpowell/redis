@@ -1,8 +1,8 @@
-use crate::command::{execute, parse};
+use crate::{command::{execute, parse}, types::DB};
 
-pub fn process(string_command: String) -> String {
+pub fn process(db: &mut DB, string_command: String) -> String {
     match parse(&string_command) {
-        Some(cmd) => execute(cmd).unwrap_or_else(|err| format!("{:?}", err)),
+        Some(cmd) => execute(db, cmd).unwrap_or_else(|err| format!("{:?}", err)),
         _ => format!("unknown error for command: {}", string_command),
     }
 }

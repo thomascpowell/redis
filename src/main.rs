@@ -1,6 +1,6 @@
 use std::{sync::Arc, thread};
 
-use crate::{threads::process, types::Queue};
+use crate::{threads::process, types::{Queue, RESPValue, DB}};
 
 mod command;
 mod db;
@@ -9,7 +9,8 @@ mod types;
 
 fn main() {
     let input_queue: Arc<Queue<String>> = Arc::new(Queue::new());
-    let output_queue: Arc<Queue<String>> = Arc::new(Queue::new());
+    let output_queue: Arc<Queue<String>> = Arc::new(Queue::new()); 
+    let mut db: DB = DB::new();
 
     let iq = input_queue.clone();
     let input_thread = thread::spawn(move || {
@@ -23,7 +24,7 @@ fn main() {
     let process_thread = thread::spawn(move || {
         loop {
             let string_command = iq.wait_pop();
-            oq.push(process(string_command))
+            oq.push(process(&mut db, string_command))
         }
     });
 

@@ -1,6 +1,7 @@
-use crate::types::{Command, ExecuteError};
+use crate::types::{Command, DB, ExecuteError, RESPValue};
 
-pub fn parse(command: &str) -> Option<Command> {
+pub fn parse(command: &str) -> Option<Command<'_>> {
+
     let parts: Vec<&str> = command.trim().split_whitespace().collect();
     match parts.as_slice() {
         ["SET", key, val] => Some(Command::Set {
@@ -22,7 +23,15 @@ pub fn parse(command: &str) -> Option<Command> {
     }
 }
 
-pub fn execute(command: Command) -> Result<String, ExecuteError> {
+pub fn execute(db: &mut DB, command: Command) -> Result<String, ExecuteError> {
     // TODO: execute parsed commands here
+    // use .to_resp() and return as String
+
+    match command {
+        Command::Set { key, value, ttl } => {}
+        Command::Del { key } => {}
+        Command::Get { key } => {}
+    }
+
     Err(ExecuteError::NotImplmented)
 }
