@@ -1,4 +1,4 @@
-use crate::types::Command;
+use crate::types::{Command, ExecuteError};
 
 pub fn parse(command: &str) -> Option<Command> {
     let parts: Vec<&str> = command.trim().split_whitespace().collect();
@@ -20,4 +20,9 @@ pub fn parse(command: &str) -> Option<Command> {
         ["DEL", key] => Some(Command::Del { key: key }),
         _ => None,
     }
+}
+
+pub fn execute(command: Command) -> Result<String, ExecuteError> {
+    // TODO: execute parsed commands here
+    Err(ExecuteError::NotImplmented)
 }
