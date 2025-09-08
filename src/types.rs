@@ -67,8 +67,28 @@ impl<T> Queue<T> {
 }
 
 #[derive(Debug)]
+// error types associated with the execute function
 pub enum ExecuteError {
     UnknownCommand,
     InvalidArgs,
     NotImplmented,
 }
+
+pub enum RESPValue {
+    Simple(String),
+    Error(String),
+    Integer(i64),
+    Boolean(bool),
+}
+
+impl RESPValue {
+    pub fn to_resp(&self) -> String {
+        match self {
+            RESPValue::Simple(s) => format!("+{}\r\n", s),
+            RESPValue::Error(e) => format!("-{}\r\n", e),
+            RESPValue::Integer(i) => format!(":{}\r\n", i),
+            RESPValue::Boolean(b) => format!("#{}\r\n", if *b {"t"} else {"f"}),
+        }
+    }
+}
+

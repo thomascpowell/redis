@@ -1,9 +1,6 @@
 use std::{sync::Arc, thread};
 
-use crate::{
-    threads::process,
-    types::Queue,
-};
+use crate::{threads::process, types::Queue};
 
 mod command;
 mod db;
@@ -14,25 +11,30 @@ fn main() {
     let input_queue: Arc<Queue<String>> = Arc::new(Queue::new());
     let output_queue: Arc<Queue<String>> = Arc::new(Queue::new());
 
-    // input thread
     let iq = input_queue.clone();
-    thread::spawn(move || {
+    let input_thread = thread::spawn(move || {
         // TODO: input loop
         let test: String = "SET test test".to_string();
-        // use owned strings so that input_queue owns them
         iq.push(test);
     });
 
-    // processing thread
     let iq = input_queue.clone();
     let oq = output_queue.clone();
-    thread::spawn(move || {
+    let process_thread = thread::spawn(move || {
         loop {
             let string_command = iq.wait_pop();
             oq.push(process(string_command))
         }
     });
 
-    //output thread
-    thread::spawn(move || {});
+    let oq = output_queue.clone();
+    let output_thread = thread::spawn(move || {
+        loop {
+            println!("{}", oq.wait_pop())
+        }
+    });
+
+    input_thread.join().unwrap();
+    process_thread.join().unwrap();
+    output_thread.join().unwrap();
 }
