@@ -1,5 +1,7 @@
 use std::{sync::Arc, thread};
 
+use redis::{JobRequest, JobResponse};
+
 use crate::db::DB;
 use crate::queue::Queue;
 
@@ -8,16 +10,16 @@ mod queue;
 mod types;
 
 fn main() {
-    let input_queue: Arc<Queue<String>> = Arc::new(Queue::new());
-    let output_queue: Arc<Queue<String>> = Arc::new(Queue::new());
+    let input_queue: Arc<Queue<JobRequest>> = Arc::new(Queue::new());
+    let output_queue: Arc<Queue<JobResponse>> = Arc::new(Queue::new());
 
     let iq = input_queue.clone();
     thread::spawn(move || {
-        let test: String = "SET test test".to_string();
+        let test: JobRequest = JobRequest {
+            client: 0,
+            command: "SET a a".to_string(),
+        };
         iq.push(test);
-        let test: String = "GET test".to_string();
-        iq.push(test);
-
     });
 
     let iq = input_queue.clone();
@@ -25,15 +27,14 @@ fn main() {
     thread::spawn(move || {
         let mut db: DB = DB::new();
         loop {
-            let string_command = iq.wait_pop();
-            oq.push(db.process(string_command))
+            oq.push(db.process(iq.wait_pop()))
         }
     });
 
     let oq = output_queue.clone();
     let t = thread::spawn(move || {
         loop {
-            println!("{}", oq.wait_pop())
+            println!("{}", oq.wait_pop().value)
         }
     });
 

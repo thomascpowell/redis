@@ -41,3 +41,22 @@ impl RESPValue {
         }
     }
 }
+
+pub struct JobRequest {
+    pub client: usize,
+    pub command: String,
+}
+
+impl JobRequest {
+    pub fn to_response(&self, value: String) -> JobResponse {
+        JobResponse {
+            client: self.client,
+            value: value,
+        }
+    }
+}
+
+pub struct JobResponse {
+    pub client: usize,
+    pub value: String,
+}

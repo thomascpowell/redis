@@ -1,4 +1,4 @@
-use crate::types::{Command, RESPValue, Value};
+use crate::{types::{Command, RESPValue, Value}, JobRequest, JobResponse};
 use std::time::{Duration, Instant};
 
 pub struct DB {
@@ -12,11 +12,12 @@ impl DB {
         }
     }
 
-    pub fn process(&mut self, string_command: String) -> String {
-        match parse(&string_command) {
+    pub fn process(&mut self, job: JobRequest) -> JobResponse {
+        let value = match parse(&job.command) {
             Some(cmd) => self.execute(cmd).to_resp(),
-            _ => format!("unknown error for command: {}", string_command),
-        }
+            _ => format!("unknown error for command: {}", job.command),
+        };
+        job.to_response(value)
     }
 
     fn set_op(&mut self, key: String, value: String, ttl: Option<u64>) {
