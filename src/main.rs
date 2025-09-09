@@ -1,15 +1,18 @@
 use std::{sync::Arc, thread};
 
-use crate::{threads::process, types::{Queue, RESPValue, DB}};
+use crate::queue::Queue;
+use crate::{threads::process, types::DB};
 
 mod command;
 mod db;
+mod queue;
 mod threads;
 mod types;
+mod errors;
 
 fn main() {
     let input_queue: Arc<Queue<String>> = Arc::new(Queue::new());
-    let output_queue: Arc<Queue<String>> = Arc::new(Queue::new()); 
+    let output_queue: Arc<Queue<String>> = Arc::new(Queue::new());
     let mut db: DB = DB::new();
 
     let iq = input_queue.clone();

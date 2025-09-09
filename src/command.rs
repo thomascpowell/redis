@@ -1,4 +1,5 @@
-use crate::types::{Command, DB, ExecuteError, RESPValue};
+use crate::types::{Command, DB, RESPValue};
+use crate::errors::ExecuteError;
 
 pub fn parse(command: &str) -> Option<Command<'_>> {
 
