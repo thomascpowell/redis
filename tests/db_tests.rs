@@ -5,7 +5,7 @@ use utils::*;
 mod utils;
 
 #[test]
-fn test_basic_operations() {
+fn test_set_get_del() {
     let mut db = DB::new();
     let set: String = "SET test test".to_string();
     let get: String = "GET test".to_string();
