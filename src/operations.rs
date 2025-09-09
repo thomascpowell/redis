@@ -1,8 +1,7 @@
-use crate::types::{Command, DB, RESPValue};
-use crate::errors::ExecuteError;
+use crate::db::DB;
+use crate::types::{Command, RESPValue };
 
 pub fn parse(command: &str) -> Option<Command<'_>> {
-
     let parts: Vec<&str> = command.trim().split_whitespace().collect();
     match parts.as_slice() {
         ["SET", key, val] => Some(Command::Set {
@@ -24,15 +23,19 @@ pub fn parse(command: &str) -> Option<Command<'_>> {
     }
 }
 
-pub fn execute(db: &mut DB, command: Command) -> Result<String, ExecuteError> {
-    // TODO: execute parsed commands here
-    // use .to_resp() and return as String
-
+pub fn execute(db: &mut DB, command: Command) -> RESPValue {
     match command {
-        Command::Set { key, value, ttl } => {}
-        Command::Del { key } => {}
-        Command::Get { key } => {}
+        Command::Set { key, value, ttl } => {
+            db.set_op(key.to_string(), value.to_string(), ttl);
+            RESPValue::Simple("OK".to_string())
+        }
+        Command::Del { key } => {
+            db.del_op(key);
+            RESPValue::Integer(1)
+        }
+        Command::Get { key } => match db.get_op(key) {
+            Some(v) => RESPValue::Simple(v),
+            None => RESPValue::Nil,
+        },
     }
-
-    Err(ExecuteError::NotImplmented)
 }

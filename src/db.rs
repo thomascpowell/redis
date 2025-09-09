@@ -1,5 +1,9 @@
-use crate::types::{DB, Entry, Value};
+use crate::types::Value;
 use std::time::{Duration, Instant};
+
+pub struct DB {
+    pub store: std::collections::HashMap<String, Value>,
+}
 
 impl DB {
     pub fn new() -> Self {
@@ -8,26 +12,31 @@ impl DB {
         }
     }
 
-    pub fn set(&mut self, key: String, value: Value, ttl: Option<u64>) {
+    pub fn set_op(&mut self, key: String, value: String, ttl: Option<u64>) {
         let expires_at = match ttl {
             Some(secs) => Some(Instant::now() + Duration::from_secs(secs)),
             None => None,
         };
-        let entry = Entry { value, expires_at };
+        let entry = Value { value, expires_at };
         self.store.insert(key, entry);
     }
 
-    pub fn get_value(&mut self, key: &str) -> Option<&Value> {
-        let entry = self.get_entry(key)?;
-        if let Some(expiry) = entry.expires_at
-            && expiry < Instant::now()
-        {
-            return None;
-        }
-        return Some(&entry.value);
+    pub fn del_op(&mut self, key: &str) {
+        self.store.remove_entry(key);
     }
 
-    pub fn get_entry(&mut self, key: &str) -> Option<&mut Entry> {
-        self.store.get_mut(key)
+    pub fn get_op(&mut self, key: &str) -> Option<String> {
+        let entry = self.store.get(key)?;
+
+        if ttl_is_expired(entry.expires_at) {
+            self.del_op(key);
+            return None;
+        }
+
+        return Some(entry.value.clone());
     }
+}
+
+fn ttl_is_expired(expires_at: Option<Instant>) -> bool {
+    expires_at.is_some_and(|ttl| ttl < Instant::now())
 }

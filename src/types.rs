@@ -1,23 +1,8 @@
-use std::{
-    collections::VecDeque,
-    sync::{Condvar, Mutex},
-    time::Instant,
-};
+use std::time::Instant;
 
-#[derive(Clone, Debug)]
-pub enum Value {
-    Bool(bool),
-    Int(i32),
-    String(String),
-}
-
-pub struct Entry {
-    pub value: Value,
+pub struct Value {
+    pub value: String,
     pub expires_at: Option<Instant>,
-}
-
-pub struct DB {
-    pub store: std::collections::HashMap<String, Entry>,
 }
 
 pub enum Command<'a> {
@@ -36,13 +21,12 @@ pub enum Command<'a> {
     // then add to parse
 }
 
-
-
 pub enum RESPValue {
     Simple(String),
     Err(String),
     Integer(i64),
     Boolean(bool),
+    Nil,
 }
 
 impl RESPValue {
@@ -51,8 +35,9 @@ impl RESPValue {
         match self {
             RESPValue::Simple(s) => format!("+{}\r\n", s), // Generic return value
             RESPValue::Err(e) => format!("-{}\r\n", e),    // Returned if error internally
-            RESPValue::Integer(i) => format!(":{}\r\n", i), // Returned after INCR/DECR
-            RESPValue::Boolean(b) => format!("#{}\r\n", if *b { "t" } else { "f" }), // Returned after toggle
+            RESPValue::Integer(i) => format!(":{}\r\n", i), // Returned after INCR/DECR, etc
+            RESPValue::Boolean(b) => format!("#{}\r\n", if *b { "t" } else { "f" }), // Returned after TOGGLE
+            RESPValue::Nil => "$-1\r\n".to_string(), // RESP Spec: "due to historical reasons"
         }
     }
 }
