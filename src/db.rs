@@ -1,4 +1,7 @@
-use crate::{types::{Command, RESPValue, Value}, JobRequest, JobResponse};
+use crate::{
+    JobRequest, JobResponse,
+    types::{Command, RESPValue, Value},
+};
 use std::time::{Duration, Instant};
 
 pub struct DB {
@@ -15,7 +18,7 @@ impl DB {
     pub fn process(&mut self, job: &JobRequest) -> JobResponse {
         let value = match parse(&job.command) {
             Some(cmd) => self.execute(cmd).to_resp(),
-            _ => format!("unknown error for command: {}", job.command),
+            _ => RESPValue::Err("unknown error for command".to_string()).to_resp(),
         };
         JobResponse { value: value }
     }
