@@ -1,4 +1,4 @@
-use std::time::Instant;
+use std::{sync::mpsc::Sender, time::Instant};
 
 pub struct Value {
     pub value: String,
@@ -43,20 +43,18 @@ impl RESPValue {
 }
 
 pub struct JobRequest {
-    pub client: usize,
     pub command: String,
+    pub respond_to: Sender<JobResponse>,
+}
+pub struct JobResponse {
+    // literally just a string wrapper
+    // in case i need to add more stuff later
+    pub value: String,
 }
 
 impl JobRequest {
-    pub fn to_response(&self, value: String) -> JobResponse {
-        JobResponse {
-            client: self.client,
-            value: value,
-        }
+    pub fn respond(self, value: String) {
+        let response = JobResponse { value };
+        let _ = self.respond_to.send(response);
     }
-}
-
-pub struct JobResponse {
-    pub client: usize,
-    pub value: String,
 }

@@ -12,12 +12,12 @@ impl DB {
         }
     }
 
-    pub fn process(&mut self, job: JobRequest) -> JobResponse {
+    pub fn process(&mut self, job: &JobRequest) -> JobResponse {
         let value = match parse(&job.command) {
             Some(cmd) => self.execute(cmd).to_resp(),
             _ => format!("unknown error for command: {}", job.command),
         };
-        job.to_response(value)
+        JobResponse { value: value }
     }
 
     fn set_op(&mut self, key: String, value: String, ttl: Option<u64>) {

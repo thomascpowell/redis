@@ -1,3 +1,5 @@
+use std::sync::mpsc;
+
 use redis::{JobRequest, JobResponse, RESPValue};
 
 pub fn get_nil_res() -> String {
@@ -9,16 +11,16 @@ pub fn get_simple_res(value: &str) -> String {
 }
 
 pub fn get_test_job_request(command: &str) -> JobRequest {
+    // dummy channel
+    let (test_tx, _) = mpsc::channel::<JobResponse>();
     JobRequest {
-        client: 0,
         command: command.to_string(),
+        respond_to: test_tx,
     }
 }
 
 pub fn get_test_job_response(value: &str) -> JobResponse {
     JobResponse {
-        client: 0,
         value: value.to_string(),
     }
 }
-
