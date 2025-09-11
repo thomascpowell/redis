@@ -46,7 +46,7 @@ impl Client {
         self.input_queue.push(job);
         match self.rx.recv() {
             Ok(response) => {
-                if let Err(e) = writeln!(self.stream, "{}", response.value) {
+                if let Err(e) = write!(self.stream, "{}", response.value) {
                     eprintln!("write error: {}", e);
                     return false;
                 }

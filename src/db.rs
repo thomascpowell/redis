@@ -48,6 +48,14 @@ impl DB {
         return Some(entry.value.clone());
     }
 
+    fn decr_op(&mut self, key: &str) -> Option<i64> {
+        add_as_int(self, key, -1)
+    }
+
+    fn incr_op(&mut self, key: &str) -> Option<i64> {
+        add_as_int(self, key, 1)
+    }
+
     fn execute(&mut self, command: Command) -> RESPValue {
         match command {
             Command::Set { key, value, ttl } => {
@@ -62,12 +70,29 @@ impl DB {
                 Some(v) => RESPValue::Simple(v),
                 None => RESPValue::Nil,
             },
+
+
+            // TODO: these commands are slightly inaccurate
+            // redis apparantly is supposed to just default to 0
+            // so incr [non int || invalid key] => 1
+            Command::Incr { key } => match self.incr_op(key) {
+                Some(v) => RESPValue::Integer(v),
+                None => RESPValue::Nil,
+            }
+            Command::Decr { key } => match self.decr_op(key) {
+                Some(v) => RESPValue::Integer(v),
+                None => RESPValue::Nil,
+            }
         }
     }
 }
 
 fn ttl_is_expired(expires_at: Option<Instant>) -> bool {
     expires_at.is_some_and(|ttl| ttl < Instant::now())
+}
+
+fn add_as_int(db: &mut DB, key: &str, operand: i64) -> Option<i64> {
+    Some(db.get_op(key)?.parse::<i64>().ok()? + operand)
 }
 
 fn parse(command: &str) -> Option<Command<'_>> {
@@ -88,6 +113,8 @@ fn parse(command: &str) -> Option<Command<'_>> {
         }
         ["GET", key] => Some(Command::Get { key: key }),
         ["DEL", key] => Some(Command::Del { key: key }),
+        ["INCR", key] => Some(Command::Incr { key: key }),
+        ["DECR", key] => Some(Command::Decr { key: key }),
         _ => None,
     }
 }

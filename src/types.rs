@@ -17,7 +17,13 @@ pub enum Command<'a> {
     Del {
         key: &'a str,
     },
-    // TODO: add bool and int specific commands
+    Incr {
+        key: &'a str
+    },
+    Decr {
+        key: &'a str
+    },
+    // TODO: add bool 
     // then add to parse
 }
 
