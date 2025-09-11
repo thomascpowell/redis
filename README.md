@@ -1,4 +1,5 @@
-## Redis (WIP)
+## "Redis" (WIP)
+[![Tests](https://github.com/thomascpowell/redis/actions/workflows/test.yml/badge.svg)](https://github.com/thomascpowell/redis/actions/workflows/test.yml)
 
 ### Features:
 - Supports a subset Redis commands
