@@ -90,18 +90,21 @@ fn ttl_is_expired(expires_at: Option<Instant>) -> bool {
 // follows redis' rules for coersion
 // error if coersion fails
 fn add_as_int(db: &mut DB, key: &str, operand: i64) -> Option<i64> {
-    let res = db.store.get(key);
-    let mut i: i64 = match res {
+    let mut res: Option<&Value> = db.store.get(key);
+    let mut i: i64;
+    let mut expires_at = res.and_then(|x| x.expires_at);
+    if ttl_is_expired(expires_at) {
+        // if ttl is expired, restart at 0
+        i = 0;
+        res = None;
+        expires_at = None;
+        db.del_op(key);
+    }
+    i = match res {
         Some(v) => v.value.parse().ok()?,
         None => 0,
     };
     i += operand;
-    // expired keys are deleted, not "revived"
-    let expires_at = res.and_then(|x| x.expires_at);
-    if ttl_is_expired(expires_at) {
-        db.del_op(key);
-        return None;
-    }
     db.store.insert(
         key.to_string(),
         Value {

@@ -17,10 +17,6 @@ impl<T> Queue<T> {
         queue.push_back(item);
         self.cvar.notify_one();
     }
-    pub fn pop(&self) -> Option<T> {
-        let mut queue = self.inner.lock().unwrap();
-        queue.pop_front()
-    }
     pub fn wait_pop(&self) -> T {
         let mut queue = self.inner.lock().unwrap();
         loop {
