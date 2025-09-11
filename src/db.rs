@@ -20,6 +20,8 @@ impl DB {
             Some(cmd) => self.execute(cmd).to_resp(),
             _ => RESPValue::Err("unknown error for command".to_string()).to_resp(),
         };
+        // this is returned to maintain unit testibility
+        // worker sends value over mpsc channel
         JobResponse { value: value }
     }
 
