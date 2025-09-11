@@ -2,6 +2,7 @@ use crate::{
     JobRequest, JobResponse,
     types::{Command, RESPValue, Value},
 };
+use std::error::Error;
 use std::time::{Duration, Instant};
 
 pub struct DB {
@@ -44,7 +45,6 @@ impl DB {
             self.del_op(key);
             return None;
         }
-
         return Some(entry.value.clone());
     }
 
@@ -70,19 +70,15 @@ impl DB {
                 Some(v) => RESPValue::Simple(v),
                 None => RESPValue::Nil,
             },
-
-
-            // TODO: these commands are slightly inaccurate
-            // redis apparantly is supposed to just default to 0
-            // so incr [non int || invalid key] => 1
             Command::Incr { key } => match self.incr_op(key) {
                 Some(v) => RESPValue::Integer(v),
-                None => RESPValue::Nil,
-            }
+                None => RESPValue::Err("WRONGTYPE".to_string()),
+            },
             Command::Decr { key } => match self.decr_op(key) {
                 Some(v) => RESPValue::Integer(v),
-                None => RESPValue::Nil,
-            }
+                None => RESPValue::Err("WRONGTYPE".to_string()),
+            },
+            _ => RESPValue::Err("not implemented".to_string()),
         }
     }
 }
@@ -91,11 +87,33 @@ fn ttl_is_expired(expires_at: Option<Instant>) -> bool {
     expires_at.is_some_and(|ttl| ttl < Instant::now())
 }
 
+// follows redis' rules for coersion
+// error if coersion fails
 fn add_as_int(db: &mut DB, key: &str, operand: i64) -> Option<i64> {
-    Some(db.get_op(key)?.parse::<i64>().ok()? + operand)
+    let res = db.store.get(key);
+    let mut i: i64 = match res {
+        Some(v) => v.value.parse().ok()?,
+        None => 0,
+    };
+    i += operand;
+    // expired keys are deleted, not "revived"
+    let expires_at = res.and_then(|x| x.expires_at);
+    if ttl_is_expired(expires_at) {
+        db.del_op(key);
+        return None;
+    }
+    db.store.insert(
+        key.to_string(),
+        Value {
+            value: i.to_string(),
+            expires_at: expires_at,
+        },
+    );
+    Some(i)
 }
 
 fn parse(command: &str) -> Option<Command<'_>> {
+    // currently only supports space delineated
     let parts: Vec<&str> = command.trim().split_whitespace().collect();
     match parts.as_slice() {
         ["SET", key, val] => Some(Command::Set {

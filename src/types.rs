@@ -23,6 +23,10 @@ pub enum Command<'a> {
     Decr {
         key: &'a str
     },
+    Toggle {
+        key: &'a str
+    }
+
     // TODO: add bool 
     // then add to parse
 }
