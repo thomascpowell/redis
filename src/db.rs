@@ -74,6 +74,40 @@ impl DB {
         }
     }
 
+    fn persist_op(&mut self, key: &str) -> i64 {
+        match self.store.get(key) {
+            Some(entry) if !ttl_is_expired(entry.expires_at) => {
+                let val = Value {
+                    value: entry.value.clone(),
+                    expires_at: None,
+                };
+                self.store.insert(key.to_string(), val);
+                1
+            }
+            Some(_) => {
+                self.del_op(key);
+                0
+            }
+            _ => 0,
+        }
+    }
+
+    fn ttl_op(&mut self, key: &str) -> i64 {
+        match self.store.get(key) {
+            Some(val) if val.expires_at.is_none() => -1,
+            Some(val) if ttl_is_expired(val.expires_at) => {
+                self.store.remove(key);
+                -2
+            }
+            Some(val) => {
+                let now = Instant::now();
+                let remaining: Duration = val.expires_at.unwrap() - now;
+                remaining.as_secs() as i64
+            }
+            None => -2,
+        }
+    }
+
     fn execute(&mut self, command: Command) -> RESPValue {
         match command {
             Command::Set { key, value, ttl } => {
@@ -100,7 +134,15 @@ impl DB {
             Command::Expire { key, ttl } => {
                 let v = self.expire_op(key, ttl);
                 RESPValue::Integer(v)
-            },
+            }
+            Command::Persist { key } => {
+                let v = self.persist_op(key);
+                RESPValue::Integer(v)
+            }
+            Command::TTL { key } => {
+                let v = self.ttl_op(key);
+                RESPValue::Integer(v)
+            }
             _ => RESPValue::Err("not implemented".to_string()),
         }
     }
