@@ -2,7 +2,6 @@ use crate::{
     JobRequest, JobResponse,
     types::{Command, RESPValue, Value},
 };
-use std::error::Error;
 use std::time::{Duration, Instant};
 
 pub struct DB {

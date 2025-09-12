@@ -23,7 +23,7 @@ pub enum Command<'a> {
     Decr {
         key: &'a str,
     },
-    Setex { 
+    Setex {
         // need to move ttl stuff here
         // real redis apparantly doesn't allow Set val ttl syntax
         value: &'a str,
@@ -38,14 +38,14 @@ pub enum Command<'a> {
     },
     Persist {
         key: &'a str,
-    }
+    },
 }
 
 pub enum RESPValue {
     Simple(String),
     Err(String),
     Integer(i64),
-    Boolean(bool),
+    Boolean(bool), // specific to RESP3, which i will not be supporting
     Nil,
 }
 
@@ -56,7 +56,7 @@ impl RESPValue {
             RESPValue::Simple(s) => format!("+{}\r\n", s), // Generic return value
             RESPValue::Err(e) => format!("-{}\r\n", e),    // Returned if error internally
             RESPValue::Integer(i) => format!(":{}\r\n", i), // Returned after INCR/DECR, etc
-            RESPValue::Boolean(b) => format!("#{}\r\n", if *b { "t" } else { "f" }), // Returned after TOGGLE
+            RESPValue::Boolean(b) => format!("#{}\r\n", if *b { "t" } else { "f" }),
             RESPValue::Nil => "$-1\r\n".to_string(), // RESP Spec: "due to historical reasons"
         }
     }

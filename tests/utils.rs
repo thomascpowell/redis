@@ -10,6 +10,11 @@ pub fn get_simple_res(value: &str) -> String {
     RESPValue::Simple(value.to_string()).to_resp()
 }
 
+pub fn get_int_res(value: i64) -> String {
+    RESPValue::Integer(value).to_resp()
+}
+
+
 pub fn get_test_job_request(command: &str) -> JobRequest {
     // dummy channel
     let (test_tx, _) = mpsc::channel::<JobResponse>();
