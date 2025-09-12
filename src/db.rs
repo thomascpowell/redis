@@ -25,12 +25,19 @@ impl DB {
         JobResponse { value: value }
     }
 
-    fn set_op(&mut self, key: String, value: String, ttl: Option<u64>) {
-        let expires_at = match ttl {
-            Some(secs) => Some(Instant::now() + Duration::from_secs(secs)),
-            None => None,
+    fn set_op(&mut self, key: String, value: String) {
+        let entry = Value {
+            value: value,
+            expires_at: None,
         };
-        let entry = Value { value, expires_at };
+        self.store.insert(key, entry);
+    }
+
+    fn setex_op(&mut self, key: String, value: String, ttl: u64) {
+        let entry = Value {
+            value: value,
+            expires_at: Some(Instant::now() + Duration::from_secs(ttl)),
+        };
         self.store.insert(key, entry);
     }
 
@@ -110,10 +117,15 @@ impl DB {
 
     fn execute(&mut self, command: Command) -> RESPValue {
         match command {
-            Command::Set { key, value, ttl } => {
-                self.set_op(key.to_string(), value.to_string(), ttl);
+            Command::Setex { key, value, ttl } => {
+                self.setex_op(key.to_string(), value.to_string(), ttl);
                 RESPValue::Simple("OK".to_string())
             }
+            Command::Set { key, value } => {
+                self.set_op(key.to_string(), value.to_string());
+                RESPValue::Simple("OK".to_string())
+            }
+
             Command::Del { key } => {
                 self.del_op(key);
                 RESPValue::Integer(1)
@@ -188,16 +200,13 @@ fn parse(command: &str) -> Option<Command<'_>> {
         ["SET", key, val] => Some(Command::Set {
             key: key,
             value: val,
-            ttl: None,
         }),
-
-        // convert this to SETEX
-        ["SET", key, val, ttl] => {
+        ["SETEX", key, val, ttl] => {
             let ttl = ttl.parse::<u64>().ok()?;
-            Some(Command::Set {
+            Some(Command::Setex {
                 key,
                 value: val,
-                ttl: Some(ttl),
+                ttl: ttl,
             })
         }
         ["EXPIRE", key, ttl] => Some(Command::Expire {

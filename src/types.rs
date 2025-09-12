@@ -6,10 +6,15 @@ pub struct Value {
 }
 
 pub enum Command<'a> {
+    
     Set {
         key: &'a str,
         value: &'a str,
-        ttl: Option<u64>,
+    },
+    Setex {
+        key: &'a str,
+        value: &'a str,
+        ttl: u64,
     },
     Get {
         key: &'a str,
@@ -22,12 +27,6 @@ pub enum Command<'a> {
     },
     Decr {
         key: &'a str,
-    },
-    Setex {
-        // need to move ttl stuff here
-        // real redis apparantly doesn't allow Set val ttl syntax
-        value: &'a str,
-        ttl: u64,
     },
     Expire {
         key: &'a str,
