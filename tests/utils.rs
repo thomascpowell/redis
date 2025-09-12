@@ -1,6 +1,6 @@
 use std::sync::mpsc;
 
-use redis::{JobRequest, JobResponse, RESPValue};
+use redis::types::{JobRequest, JobResponse, RESPValue};
 
 pub fn get_nil_res() -> String {
     RESPValue::Nil.to_resp()

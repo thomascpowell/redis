@@ -1,6 +1,6 @@
 use std::{sync::Arc, thread};
 
-use redis::Queue;
+use redis::queue::Queue;
 
 #[test]
 fn test_queue() {

@@ -16,6 +16,7 @@ mod client;
 mod db;
 mod queue;
 mod types;
+mod helpers;
 
 fn main() {
         

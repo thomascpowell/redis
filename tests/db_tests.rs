@@ -1,4 +1,4 @@
-use redis::DB;
+use redis::db::DB;
 use std::{thread::sleep, time::Duration};
 use utils::*;
 
