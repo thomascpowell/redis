@@ -1,4 +1,7 @@
-use std::{collections::VecDeque, sync::{Condvar, Mutex}};
+use std::{
+    collections::VecDeque,
+    sync::{Condvar, Mutex},
+};
 
 pub struct Queue<T> {
     inner: Mutex<VecDeque<T>>,
