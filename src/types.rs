@@ -18,17 +18,27 @@ pub enum Command<'a> {
         key: &'a str,
     },
     Incr {
-        key: &'a str
+        key: &'a str,
     },
     Decr {
-        key: &'a str
+        key: &'a str,
     },
-    Toggle {
-        key: &'a str
+    Setex { 
+        // need to move ttl stuff here
+        // real redis apparantly doesn't allow Set val ttl syntax
+        value: &'a str,
+        ttl: u64,
+    },
+    Expire {
+        key: &'a str,
+        ttl: u64,
+    },
+    TTL {
+        key: &'a str,
+    },
+    Persist {
+        key: &'a str,
     }
-
-    // TODO: add bool 
-    // then add to parse
 }
 
 pub enum RESPValue {

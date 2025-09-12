@@ -56,6 +56,25 @@ impl DB {
         add_as_int(self, key, 1)
     }
 
+    fn expire_op(&mut self, key: &str, ttl: u64) -> i64 {
+        match self.store.get(key) {
+            Some(entry) if !ttl_is_expired(entry.expires_at) => {
+                let val = Value {
+                    value: entry.value.clone(),
+                    expires_at: Some(Instant::now() + Duration::from_secs(ttl)),
+                };
+                self.store.insert(key.to_string(), val);
+                1
+            }
+            Some(_) => {
+                // key exists but expired
+                self.del_op(key);
+                0
+            }
+            None => 0,
+        }
+    }
+
     fn execute(&mut self, command: Command) -> RESPValue {
         match command {
             Command::Set { key, value, ttl } => {
@@ -67,6 +86,7 @@ impl DB {
                 RESPValue::Integer(1)
             }
             Command::Get { key } => match self.get_op(key) {
+                // will need to return bulk strings once added
                 Some(v) => RESPValue::Simple(v),
                 None => RESPValue::Nil,
             },
@@ -77,6 +97,10 @@ impl DB {
             Command::Decr { key } => match self.decr_op(key) {
                 Some(v) => RESPValue::Integer(v),
                 None => RESPValue::Err("WRONGTYPE".to_string()),
+            },
+            Command::Expire { key, ttl } => {
+                let v = self.expire_op(key, ttl);
+                RESPValue::Integer(v)
             },
             _ => RESPValue::Err("not implemented".to_string()),
         }
@@ -117,6 +141,7 @@ fn add_as_int(db: &mut DB, key: &str, operand: i64) -> Option<i64> {
 
 fn parse(command: &str) -> Option<Command<'_>> {
     // currently only supports space delineated
+    // will need to parse array bulk string commands
     let parts: Vec<&str> = command.trim().split_whitespace().collect();
     match parts.as_slice() {
         ["SET", key, val] => Some(Command::Set {
@@ -124,6 +149,8 @@ fn parse(command: &str) -> Option<Command<'_>> {
             value: val,
             ttl: None,
         }),
+
+        // convert this to SETEX
         ["SET", key, val, ttl] => {
             let ttl = ttl.parse::<u64>().ok()?;
             Some(Command::Set {
@@ -132,6 +159,12 @@ fn parse(command: &str) -> Option<Command<'_>> {
                 ttl: Some(ttl),
             })
         }
+        ["EXPIRE", key, ttl] => Some(Command::Expire {
+            key,
+            ttl: ttl.parse::<u64>().ok()?,
+        }),
+        ["PERSIST", key] => Some(Command::Persist { key: key }),
+        ["TTL", key] => Some(Command::TTL { key: key }),
         ["GET", key] => Some(Command::Get { key: key }),
         ["DEL", key] => Some(Command::Del { key: key }),
         ["INCR", key] => Some(Command::Incr { key: key }),

@@ -3,7 +3,7 @@
 
 ### Features:
 - Supports a subset Redis commands
-- Output based on [RESP](https://redis.io/docs/latest/develop/reference/protocol-spec/)
+- Output based on [RESP2](https://redis.io/docs/latest/develop/reference/protocol-spec/)
 
 ### Technical Details:
 - Written in Rust with no external dependencies
