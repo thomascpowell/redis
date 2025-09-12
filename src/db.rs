@@ -117,6 +117,7 @@ impl DB {
 
     fn execute(&mut self, command: Command) -> RESPValue {
         match command {
+            Command::Ping => RESPValue::Simple("PONG".to_string()),
             Command::Setex { key, value, ttl } => {
                 self.setex_op(key.to_string(), value.to_string(), ttl);
                 RESPValue::Simple("OK".to_string())
@@ -125,7 +126,6 @@ impl DB {
                 self.set_op(key.to_string(), value.to_string());
                 RESPValue::Simple("OK".to_string())
             }
-
             Command::Del { key } => {
                 self.del_op(key);
                 RESPValue::Integer(1)
@@ -219,6 +219,7 @@ fn parse(command: &str) -> Option<Command<'_>> {
         ["DEL", key] => Some(Command::Del { key: key }),
         ["INCR", key] => Some(Command::Incr { key: key }),
         ["DECR", key] => Some(Command::Decr { key: key }),
+        ["PING"] => Some(Command::Ping),
         _ => None,
     }
 }

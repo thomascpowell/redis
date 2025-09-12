@@ -6,7 +6,7 @@ pub struct Value {
 }
 
 pub enum Command<'a> {
-    
+    Ping,
     Set {
         key: &'a str,
         value: &'a str,
