@@ -39,8 +39,7 @@ impl DB {
                 RESPValue::Integer(1)
             }
             Command::Get { key } => match self.get_op(key) {
-                // will need to return bulk strings once added
-                Some(v) => RESPValue::Simple(v),
+                Some(v) => RESPValue::BulkString(v),
                 None => RESPValue::Nil,
             },
             Command::Incr { key } => match self.incr_op(key) {
