@@ -1,6 +1,9 @@
 use std::time::Instant;
 
-use crate::{db::DB, types::{Command, Value}};
+use crate::{
+    db::DB,
+    types::{Command, Value},
+};
 
 pub fn ttl_is_expired(expires_at: Option<Instant>) -> bool {
     expires_at.is_some_and(|ttl| ttl < Instant::now())
@@ -33,9 +36,7 @@ pub fn add_as_int(db: &mut DB, key: &str, operand: i64) -> Option<i64> {
 }
 
 pub fn parse(command: &str) -> Option<Command<'_>> {
-    // currently only supports space delineated
-    // will need to parse array bulk string commands
-    let parts: Vec<&str> = command.trim().split_whitespace().collect();
+    let parts: Vec<&str> = basic_tokenize(command)?;
     match parts.as_slice() {
         ["SET", key, val] => Some(Command::Set {
             key: key,
@@ -61,5 +62,30 @@ pub fn parse(command: &str) -> Option<Command<'_>> {
         ["DECR", key] => Some(Command::Decr { key: key }),
         ["PING"] => Some(Command::Ping),
         _ => None,
+    }
+}
+
+pub fn tokenize(command: &str) -> Option<Vec<&str>> {
+    let mut tokens = command.trim().split("\r\n");
+
+
+    if !tokens.next().is_some_and(|x| x.starts_with("*")) {
+        // if the claimed length matches the real length does not matter for my purposes 
+        return None
+    }
+
+    while let Some(next) = tokens.next() {
+        
+    }
+
+    None
+}
+
+pub fn basic_tokenize(command: &str) -> Option<Vec<&str>> {
+    let tokens: Vec<&str> = command.trim().split_whitespace().collect();
+    if tokens.is_empty() {
+        None
+    } else {
+        Some(tokens)
     }
 }
