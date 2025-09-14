@@ -46,6 +46,10 @@ pub enum RESPValue {
     Integer(i64),
     Boolean(bool), // specific to RESP3, which i will not be supporting
     Nil,
+
+    BulkString(String),
+    // Array(String), // would be a type here, but commands that return this are not supported
+
 }
 
 impl RESPValue {
@@ -57,6 +61,7 @@ impl RESPValue {
             RESPValue::Integer(i) => format!(":{}\r\n", i), // Returned after INCR/DECR, etc
             RESPValue::Boolean(b) => format!("#{}\r\n", if *b { "t" } else { "f" }),
             RESPValue::Nil => "$-1\r\n".to_string(), // RESP Spec: "due to historical reasons"
+            RESPValue::BulkString(s) => format!("${}\r\n{}\r\n", s.len(), s),
         }
     }
 }
