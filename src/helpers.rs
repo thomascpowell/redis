@@ -64,36 +64,3 @@ pub fn parse(tokens: &Vec<String>) -> Option<Command<'_>> {
         _ => None,
     }
 }
-
-pub fn tokenize(command: &str) -> Option<Vec<&str>> {
-    let mut raw = command.trim().split("\r\n");
-    let mut res: Vec<&str> = Vec::new();
-
-    // length of the array of bulk strings
-    let array_length = match raw.next()?.strip_prefix('*') {
-        Some(length) => {
-            length.parse::<usize>().ok()
-        } 
-        _ => None
-    }?;
-
-    // enforce max length
-    for _ in 0..array_length {
-        // currently doing nothing with this value
-        let _next_length: usize = raw.next()?.strip_prefix('$')?.parse().ok()?;
-        // perhaps do null strings here?
-        res.push(raw.next()?);
-    }
-
-    Some(res)
-}
-
-
-pub fn basic_tokenize(command: &str) -> Option<Vec<&str>> {
-    let tokens: Vec<&str> = command.trim().split_whitespace().collect();
-    if tokens.is_empty() {
-        None
-    } else {
-        Some(tokens)
-    }
-}
