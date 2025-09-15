@@ -1,8 +1,8 @@
 # "Redis"
 
-A Redis clone written in Rust. Works will existing Redis clients such as `redis-cli`.
+A Redis clone written in Rust. Works with existing Redis clients such as `redis-cli`.
 
-[![Tests](https://github.com/thomascpowell/redis/actions/workflows/test.yml/badge.svg)](https://github.com/thomascpowell/redis/actions/workflows/test.yml)
+[![tests](https://github.com/thomascpowell/redis/actions/workflows/test.yml/badge.svg)](https://github.com/thomascpowell/redis/actions/workflows/test.yml)
 
 ## Features
 - [RESP2](https://redis.io/docs/latest/develop/reference/protocol-spec/) compliant for supported commands
@@ -20,7 +20,6 @@ A Redis clone written in Rust. Works will existing Redis clients such as `redis-
 - `TTL key`: Check remaining TTL
 - `PERSIST key`: Remove TTL
 - `PING`: Health check
-
 
 ## Usage
 ```sh
