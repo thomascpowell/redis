@@ -66,7 +66,7 @@ impl RESPValue {
 }
 
 pub struct JobRequest {
-    pub command: String,
+    pub tokens: Vec<String>,
     pub respond_to: Sender<JobResponse>,
 }
 pub struct JobResponse {

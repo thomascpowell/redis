@@ -14,7 +14,7 @@ impl DB {
     }
 
     pub fn process(&mut self, job: &JobRequest) -> JobResponse {
-        let value = match parse(&job.command) {
+        let value = match parse(&job.tokens) {
             Some(cmd) => self.execute(cmd).to_resp(),
             _ => RESPValue::Err("unknown error for command".to_string()).to_resp(),
         };

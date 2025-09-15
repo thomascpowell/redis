@@ -35,9 +35,9 @@ pub fn add_as_int(db: &mut DB, key: &str, operand: i64) -> Option<i64> {
     Some(i)
 }
 
-pub fn parse(command: &str) -> Option<Command<'_>> {
-    let parts: Vec<&str> = basic_tokenize(command)?;
-    match parts.as_slice() {
+pub fn parse(tokens: &Vec<String>) -> Option<Command<'_>> {
+    let tokens_ref: Vec<&str> = tokens.iter().map(|s| s.as_str()).collect();
+    match tokens_ref.as_slice() {
         ["SET", key, val] => Some(Command::Set {
             key: key,
             value: val,

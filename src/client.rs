@@ -1,7 +1,8 @@
-use std::io::{BufRead, BufReader, Write};
+use std::io::{BufRead, BufReader, Read, Write};
 use std::net::TcpStream;
 use std::sync::{Arc, mpsc};
 
+use crate::types::Command;
 use crate::{
     queue::Queue,
     types::{JobRequest, JobResponse},
@@ -15,48 +16,98 @@ pub struct Client {
     pub rx: mpsc::Receiver<JobResponse>,
 }
 
+#[derive(Debug)]
+pub enum IOError {
+    MissingCRLF,
+    Default,
+    InvalidData,
+}
+
 impl Client {
     pub fn run(&mut self) {
         loop {
-            let should_continue = self.process_line();
-            if !should_continue {
-                break;
+            match self.get_valid_io() {
+                Ok(tokens) => {
+                    let job = JobRequest {
+                        tokens,
+                        respond_to: self.tx.clone(),
+                    };
+                    self.input_queue.push(job);
+                }
+                Err(e) => {
+                    eprintln!("client error: {:?}", e);
+                    break;
+                }
+            }
+            match self.rx.recv() {
+                Ok(response) => {
+                    if let Err(e) = write!(self.stream, "{}", response.value) {
+                        eprintln!("write error: {}", e);
+                        break;
+                    }
+                }
+                Err(_) => {
+                    eprintln!("response channel closed");
+                    break;
+                }
             }
         }
     }
 
+    pub fn get_valid_io(&mut self) -> Result<Vec<String>, IOError> {
+        let mut tokens: Vec<String> = Vec::new();
+        let mut line = String::new();
 
-    fn process_line(&mut self) -> bool {
-        let mut buf = String::new();
-        let _ = match self.reader.read_line(&mut buf) {
-            Ok(0) => return false,
-            Ok(n) => n,
-            Err(e) => {
-                eprintln!("read error: {}", e);
-                return false;
+        // read overall length
+        self.get_line(&mut line)?;
+        let command_len: usize = line
+            .trim_end()
+            .strip_prefix('*')
+            .ok_or(IOError::InvalidData)?
+            .parse()
+            .map_err(|_| IOError::InvalidData)?;
+
+        println!("cmmand len: {}", command_len);
+        // read tokens
+        for _ in 0..command_len {
+            line.clear();
+            // read next token length
+            self.get_line(&mut line)?;
+            let token_len: usize = line
+                .trim_end()
+                .strip_prefix('$')
+                .ok_or(IOError::InvalidData)?
+                .parse()
+                .map_err(|_| IOError::InvalidData)?;
+            let mut token_buf = vec![0; token_len];
+            self.get_exact(&mut token_buf)?;
+
+            // read crlf
+            let mut crlf = [0; 2];
+            self.get_exact(&mut crlf)?;
+            if &crlf != b"\r\n" {
+                return Err(IOError::MissingCRLF);
             }
-        };
-        let command = buf.trim().to_string();
-        if command.is_empty() {
-            return true;
+
+            // store the token
+            let token = String::from_utf8(token_buf).map_err(|_| IOError::InvalidData)?;
+            tokens.push(token);
         }
-        let job = JobRequest {
-            command,
-            respond_to: self.tx.clone(),
-        };
-        self.input_queue.push(job);
-        match self.rx.recv() {
-            Ok(response) => {
-                if let Err(e) = write!(self.stream, "{}", response.value) {
-                    eprintln!("write error: {}", e);
-                    return false;
-                }
-                return true;
-            }
-            Err(_) => {
-                eprintln!("response channel closed");
-                return false;
-            }
-        }
+        Ok(tokens)
+    }
+
+    pub fn get_line(&mut self, buf: &mut String) -> Result<usize, IOError> {
+        let res = self.reader.read_line(buf).map_err(|_| IOError::InvalidData);
+        println!("{:?}", buf);
+        res
+    }
+
+    fn get_exact(&mut self, buf: &mut [u8]) -> Result<(), IOError> {
+        let res = self
+            .reader
+            .read_exact(buf)
+            .map_err(|_| IOError::MissingCRLF);
+        println!("{:?}", buf);
+        res
     }
 }
