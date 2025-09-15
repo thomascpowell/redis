@@ -1,8 +1,8 @@
 use redis::db::DB;
 use std::{thread::sleep, time::Duration};
-use utils::*;
+use db_utils::*;
 
-mod utils;
+mod db_utils;
 
 #[test]
 fn test_set_get_del() {

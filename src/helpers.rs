@@ -36,7 +36,7 @@ pub fn add_as_int(db: &mut DB, key: &str, operand: i64) -> Option<i64> {
 }
 
 pub fn parse(command: &str) -> Option<Command<'_>> {
-    let parts: Vec<&str> = tokenize(command)?;
+    let parts: Vec<&str> = basic_tokenize(command)?;
     match parts.as_slice() {
         ["SET", key, val] => Some(Command::Set {
             key: key,
@@ -68,8 +68,6 @@ pub fn parse(command: &str) -> Option<Command<'_>> {
 pub fn tokenize(command: &str) -> Option<Vec<&str>> {
     let mut raw = command.trim().split("\r\n");
     let mut res: Vec<&str> = Vec::new();
-
-    // println!("Split parts: {:?}", raw);
 
     // length of the array of bulk strings
     let array_length = match raw.next()?.strip_prefix('*') {
