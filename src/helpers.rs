@@ -36,7 +36,7 @@ pub fn add_as_int(db: &mut DB, key: &str, operand: i64) -> Option<i64> {
 }
 
 pub fn parse(command: &str) -> Option<Command<'_>> {
-    let parts: Vec<&str> = basic_tokenize(command)?;
+    let parts: Vec<&str> = tokenize(command)?;
     match parts.as_slice() {
         ["SET", key, val] => Some(Command::Set {
             key: key,
@@ -66,20 +66,30 @@ pub fn parse(command: &str) -> Option<Command<'_>> {
 }
 
 pub fn tokenize(command: &str) -> Option<Vec<&str>> {
-    let mut tokens = command.trim().split("\r\n");
+    let mut raw = command.trim().split("\r\n");
+    let mut res: Vec<&str> = Vec::new();
 
+    // println!("Split parts: {:?}", raw);
 
-    if !tokens.next().is_some_and(|x| x.starts_with("*")) {
-        // if the claimed length matches the real length does not matter for my purposes 
-        return None
+    // length of the array of bulk strings
+    let array_length = match raw.next()?.strip_prefix('*') {
+        Some(length) => {
+            length.parse::<usize>().ok()
+        } 
+        _ => None
+    }?;
+
+    // enforce max length
+    for _ in 0..array_length {
+        // currently doing nothing with this value
+        let _next_length: usize = raw.next()?.strip_prefix('$')?.parse().ok()?;
+        // perhaps do null strings here?
+        res.push(raw.next()?);
     }
 
-    while let Some(next) = tokens.next() {
-        
-    }
-
-    None
+    Some(res)
 }
+
 
 pub fn basic_tokenize(command: &str) -> Option<Vec<&str>> {
     let tokens: Vec<&str> = command.trim().split_whitespace().collect();

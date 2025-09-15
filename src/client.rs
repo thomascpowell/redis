@@ -25,6 +25,7 @@ impl Client {
         }
     }
 
+
     fn process_line(&mut self) -> bool {
         let mut buf = String::new();
         let _ = match self.reader.read_line(&mut buf) {
