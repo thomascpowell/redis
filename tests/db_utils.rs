@@ -20,16 +20,23 @@ pub fn get_int_res(value: i64) -> String {
 }
 
 
-pub fn get_test_job_request(command: &str) -> JobRequest {
+pub fn get_job_request(command: &String) -> JobRequest {
     // dummy channel
     let (test_tx, _) = mpsc::channel::<JobResponse>();
+    // turn command into tokens
+    // this simulates what the io loop does
+    let tokens: Vec<String> = command
+        .split_whitespace()
+        .map(|s| s.to_string())
+        .collect();
+
     JobRequest {
-        command: command.to_string(),
+        tokens: tokens,
         respond_to: test_tx,
     }
 }
 
-pub fn get_test_job_response(value: &str) -> JobResponse {
+pub fn get_job_response(value: &str) -> JobResponse {
     JobResponse {
         value: value.to_string(),
     }

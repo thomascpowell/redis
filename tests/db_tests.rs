@@ -7,43 +7,43 @@ mod db_utils;
 #[test]
 fn test_set_get_del() {
     let mut db = DB::new();
-    let set = "SET test test";
-    let get = "GET test";
-    let del = "DEL test";
+    let set = "SET test test".to_string();
+    let get = "GET test".to_string();
+    let del = "DEL test".to_string();
 
     // SET
-    db.process(&get_test_job_request(set));
+    db.process(&get_job_request(&set));
     assert_eq!(db.store.len(), 1);
     assert_eq!(
-        db.process(&get_test_job_request(get)).value, // process a test JobRequest
+        db.process(&get_job_request(&get)).value, // process a test JobRequest
         get_bulk_res("test")                        // compare it to a test RESP string
     );
 
     // DEL
-    db.process(&get_test_job_request(del));
+    db.process(&get_job_request(&del));
     assert_eq!(db.store.len(), 0);
-    assert_eq!(db.process(&get_test_job_request(get)).value, get_nil_res());
+    assert_eq!(db.process(&get_job_request(&get)).value, get_nil_res());
 }
 
 #[test]
 fn test_ttl() {
     let mut db = DB::new();
-    let set = "SETEX test test 1";
-    let get = "GET test";
+    let set = "SETEX test test 1".to_string();
+    let get = "GET test".to_string();
 
     // SET
-    db.process(&get_test_job_request(set));
+    db.process(&get_job_request(&set));
 
     // GET
     assert_eq!(
-        db.process(&get_test_job_request(get)).value,
+        db.process(&get_job_request(&get)).value,
         get_bulk_res("test")
     );
 
     // GET after TTL
     sleep(Duration::new(1, 1));
     assert_ne!(
-        db.process(&get_test_job_request(get)).value,
+        db.process(&get_job_request(&get)).value,
         get_bulk_res("test")
     );
 }
@@ -51,16 +51,16 @@ fn test_ttl() {
 #[test]
 fn test_expire() {
     let mut db = DB::new();
-    let set = "SET test test";
-    let get = "GET test";
-    let expire = "EXPIRE test 0";
+    let set = "SET test test".to_string();
+    let get = "GET test".to_string();
+    let expire = "EXPIRE test 0".to_string();
 
     // other tests cover basic features
     // this is just to test using expire on an already expired key
 
-    let cmd1 = &get_test_job_request(set);
-    let cmd2 = &get_test_job_request(get);
-    let cmd3 = &get_test_job_request(expire);
+    let cmd1 = &get_job_request(&set);
+    let cmd2 = &get_job_request(&get);
+    let cmd3 = &get_job_request(&expire);
     db.process(cmd1);
 
     // add expiration to active key
@@ -74,22 +74,22 @@ fn test_expire() {
 #[test]
 fn test_incr_decr() {
     let mut db = DB::new();
-    let incr = "INCR test";
-    let decr = "DECR test";
-    let ttl = "EXPIRE test 0";
+    let incr = "INCR test".to_string();
+    let decr = "DECR test".to_string();
+    let ttl = "EXPIRE test 0".to_string();
 
     // INCR, test should be 1
-    let cmd1 = &get_test_job_request(incr);
+    let cmd1 = &get_job_request(&incr);
     assert_eq!(db.process(cmd1).value, get_int_res(1));
 
     // DECR 2x, test should be -1
-    let cmd2 = &get_test_job_request(decr);
+    let cmd2 = &get_job_request(&decr);
     db.process(cmd2);
     assert_eq!(db.process(cmd2).value, get_int_res(-1));
 
     // ADD TTL, then INCR. should reset to 0 -> 1
-    let cmd3 = &get_test_job_request(ttl);
-    let cmd4 = &get_test_job_request(incr);
+    let cmd3 = &get_job_request(&ttl);
+    let cmd4 = &get_job_request(&incr);
     db.process(cmd3);
     assert_eq!(db.process(cmd4).value, get_int_res(1));
 }
@@ -97,10 +97,10 @@ fn test_incr_decr() {
 #[test]
 fn test_invalid_incr_decr() {
     let mut db = DB::new();
-    let incr = "INCR test";
-    let set = "SET test impossible";
-    let cmd1 = &get_test_job_request(set);
-    let cmd2 = &get_test_job_request(incr);
+    let incr = "INCR test".to_string();
+    let set = "SET test impossible".to_string();
+    let cmd1 = &get_job_request(&set);
+    let cmd2 = &get_job_request(&incr);
 
     db.process(cmd1);
     // INCR should error
