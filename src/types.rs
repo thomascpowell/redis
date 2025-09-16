@@ -59,7 +59,7 @@ impl RESPValue {
             RESPValue::Err(e) => format!("-{}\r\n", e),    // Returned if error internally
             RESPValue::Integer(i) => format!(":{}\r\n", i), // Returned after INCR/DECR, etc
             RESPValue::Boolean(b) => format!("#{}\r\n", if *b { "t" } else { "f" }), // probably will not be using this
-            RESPValue::Nil => "$-1\r\n".to_string(),       // RESP Spec: "due to historical reasons"
+            RESPValue::Nil => "$-1\r\n".to_string(), // RESP Spec: "due to historical reasons"
             RESPValue::BulkString(s) => format!("${}\r\n{}\r\n", s.len(), s),
         }
     }
@@ -71,6 +71,7 @@ pub struct JobRequest {
 }
 pub struct JobResponse {
     // literally just a string wrapper
+    // mainly used to testing but also
     // in case i need to add more stuff later
     pub value: String,
 }

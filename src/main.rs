@@ -16,16 +16,13 @@ mod client;
 mod db;
 mod queue;
 mod types;
-mod helpers;
 
 fn main() {
-        
     let addr: String = env::args().nth(1).unwrap_or("127.0.0.1:6379".to_string());
-
     let input_queue: Arc<Queue<JobRequest>> = Arc::new(Queue::new());
     let listener = TcpListener::bind(addr).unwrap();
 
-    // worker
+    // Worker Thread
     let iq = input_queue.clone();
     let t = thread::spawn(move || {
         let mut db: DB = DB::new();
@@ -36,7 +33,7 @@ fn main() {
         }
     });
 
-    // io
+    // IO Threads
     for stream in listener.incoming() {
         let iq = input_queue.clone();
         let stream = stream.unwrap();

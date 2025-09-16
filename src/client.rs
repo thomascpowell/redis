@@ -2,7 +2,6 @@ use std::io::{BufRead, BufReader, Read, Write};
 use std::net::TcpStream;
 use std::sync::{Arc, mpsc};
 
-use crate::types::Command;
 use crate::{
     queue::Queue,
     types::{JobRequest, JobResponse},
@@ -26,35 +25,43 @@ pub enum IOError {
 impl Client {
     pub fn run(&mut self) {
         loop {
-            match self.get_valid_io() {
-                Ok(tokens) => {
-                    let job = JobRequest {
-                        tokens,
-                        respond_to: self.tx.clone(),
-                    };
-                    self.input_queue.push(job);
-                }
-                Err(e) => {
-                    eprintln!("client error: {:?}", e);
-                    break;
-                }
-            }
-            match self.rx.recv() {
-                Ok(response) => {
-                    if let Err(e) = write!(self.stream, "{}", response.value) {
-                        eprintln!("write error: {}", e);
-                        break;
-                    }
-                }
-                Err(_) => {
-                    eprintln!("response channel closed");
-                    break;
-                }
+            let should_continue: bool = self.handle_input();
+            if !should_continue {
+                break
             }
         }
     }
 
-    pub fn get_valid_io(&mut self) -> Result<Vec<String>, IOError> {
+    // return type corresponds to "should continue?"
+    fn handle_input(&mut self) -> bool {
+        match self.get_valid_io() {
+            Ok(tokens) => {
+                let job = JobRequest {
+                    tokens,
+                    respond_to: self.tx.clone(),
+                };
+                self.input_queue.push(job);
+            }
+            Err(e) => {
+                eprintln!("client error: {:?}", e);
+                return false;
+            }
+        }
+        match self.rx.recv() {
+            Ok(response) => {
+                if let Err(e) = write!(self.stream, "{}", response.value) {
+                    eprintln!("write error: {}", e);
+                }
+            }
+            Err(_) => {
+                eprintln!("response channel closed");
+                return false;
+            }
+        }
+        return true
+    }
+
+    fn get_valid_io(&mut self) -> Result<Vec<String>, IOError> {
         let mut tokens: Vec<String> = Vec::new();
         let mut line = String::new();
 
@@ -96,7 +103,7 @@ impl Client {
         Ok(tokens)
     }
 
-    pub fn get_line(&mut self, buf: &mut String) -> Result<usize, IOError> {
+    fn get_line(&mut self, buf: &mut String) -> Result<usize, IOError> {
         let res = self.reader.read_line(buf).map_err(|_| IOError::InvalidData);
         println!("{:?}", buf);
         res
