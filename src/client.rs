@@ -27,7 +27,7 @@ impl Client {
         loop {
             let should_continue: bool = self.handle_input();
             if !should_continue {
-                break
+                break;
             }
         }
     }
@@ -58,7 +58,7 @@ impl Client {
                 return false;
             }
         }
-        return true
+        return true;
     }
 
     fn get_valid_io(&mut self) -> Result<Vec<String>, IOError> {
@@ -73,8 +73,6 @@ impl Client {
             .ok_or(IOError::InvalidData)?
             .parse()
             .map_err(|_| IOError::InvalidData)?;
-
-        println!("cmmand len: {}", command_len);
         // read tokens
         for _ in 0..command_len {
             line.clear();
@@ -100,12 +98,12 @@ impl Client {
             let token = String::from_utf8(token_buf).map_err(|_| IOError::InvalidData)?;
             tokens.push(token);
         }
+        println!("{:?}", tokens);
         Ok(tokens)
     }
 
     fn get_line(&mut self, buf: &mut String) -> Result<usize, IOError> {
         let res = self.reader.read_line(buf).map_err(|_| IOError::InvalidData);
-        println!("{:?}", buf);
         res
     }
 
@@ -114,7 +112,6 @@ impl Client {
             .reader
             .read_exact(buf)
             .map_err(|_| IOError::MissingCRLF);
-        println!("{:?}", buf);
         res
     }
 }

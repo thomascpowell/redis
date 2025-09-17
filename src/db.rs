@@ -5,7 +5,6 @@ pub struct DB {
     pub store: std::collections::HashMap<String, Value>,
 }
 
-
 /**
 * Public DB methods
 * */
@@ -64,12 +63,10 @@ impl DB {
             Command::TTL { key } => {
                 let v = self.ttl_op(key);
                 RESPValue::Integer(v)
-            }
-            // _ => RESPValue::Err("not implemented".to_string()),
+            } // _ => RESPValue::Err("not implemented".to_string()),
         }
     }
 }
-
 
 /**
 * Redis Operations
@@ -201,12 +198,13 @@ fn add_as_int(db: &mut DB, key: &str, operand: i64) -> Option<i64> {
 
 fn parse(tokens: &Vec<String>) -> Option<Command<'_>> {
     let tokens_ref: Vec<&str> = tokens.iter().map(|s| s.as_str()).collect();
+    let cmd = tokens_ref[0].to_ascii_uppercase();
     match tokens_ref.as_slice() {
-        ["SET", key, val] => Some(Command::Set {
+        [_, key, val] if cmd == "SET" => Some(Command::Set {
             key: key,
             value: val,
         }),
-        ["SETEX", key, val, ttl] => {
+        [_, key, val, ttl] if cmd == "SETEX" => {
             let ttl = ttl.parse::<u64>().ok()?;
             Some(Command::Setex {
                 key,
@@ -214,17 +212,17 @@ fn parse(tokens: &Vec<String>) -> Option<Command<'_>> {
                 ttl: ttl,
             })
         }
-        ["EXPIRE", key, ttl] => Some(Command::Expire {
+        [_, key, ttl] if cmd == "EXPIRE" => Some(Command::Expire {
             key,
             ttl: ttl.parse::<u64>().ok()?,
         }),
-        ["PERSIST", key] => Some(Command::Persist { key: key }),
-        ["TTL", key] => Some(Command::TTL { key: key }),
-        ["GET", key] => Some(Command::Get { key: key }),
-        ["DEL", key] => Some(Command::Del { key: key }),
-        ["INCR", key] => Some(Command::Incr { key: key }),
-        ["DECR", key] => Some(Command::Decr { key: key }),
-        ["PING"] => Some(Command::Ping),
+        [_, key] if cmd == "PERSIST" => Some(Command::Persist { key }),
+        [_, key] if cmd == "TTL" => Some(Command::TTL { key }),
+        [_, key] if cmd == "GET" => Some(Command::Get { key }),
+        [_, key] if cmd == "DEL" => Some(Command::Del { key }),
+        [_, key] if cmd == "INCR" => Some(Command::Incr { key }),
+        [_, key] if cmd == "DECR" => Some(Command::Decr { key }),
+        [_] if cmd == "PING" => Some(Command::Ping),
         _ => None,
     }
 }
