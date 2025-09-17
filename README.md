@@ -1,6 +1,6 @@
 # "Redis"
 
-A Redis clone written in Rust. Works with existing Redis clients such as `redis-cli`.
+A Redis clone written in Rust. Works with existing Redis clients such as `redis-cli` and `go-redis`.
 
 [![tests](https://github.com/thomascpowell/redis/actions/workflows/test.yml/badge.svg)](https://github.com/thomascpowell/redis/actions/workflows/test.yml)
 
