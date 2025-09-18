@@ -28,7 +28,7 @@ fn test_set_get_del() {
 #[test]
 fn test_ttl() {
     let mut db = DB::new();
-    let set = "SETEX test test 1".to_string();
+    let set = "SETEX test 1 test".to_string();
     let get = "GET test".to_string();
 
     // SET

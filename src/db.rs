@@ -204,7 +204,7 @@ fn parse(tokens: &Vec<String>) -> Option<Command<'_>> {
             key: key,
             value: val,
         }),
-        [_, key, val, ttl] if cmd == "SETEX" => {
+        [_, key, ttl, val] if cmd == "SETEX" => {
             let ttl = ttl.parse::<u64>().ok()?;
             Some(Command::Setex {
                 key,
