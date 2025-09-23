@@ -6,10 +6,6 @@ pub fn get_nil_res() -> String {
     RESPValue::Nil.to_resp()
 }
 
-pub fn get_simple_res(value: &str) -> String {
-    RESPValue::Simple(value.to_string()).to_resp()
-}
-
 pub fn get_bulk_res(value: &str) -> String {
     RESPValue::BulkString(value.to_string()).to_resp()
 }
@@ -33,11 +29,5 @@ pub fn get_job_request(command: &String) -> JobRequest {
     JobRequest {
         tokens: tokens,
         respond_to: test_tx,
-    }
-}
-
-pub fn get_job_response(value: &str) -> JobResponse {
-    JobResponse {
-        value: value.to_string(),
     }
 }

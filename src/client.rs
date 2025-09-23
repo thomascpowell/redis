@@ -18,7 +18,7 @@ pub struct Client {
 #[derive(Debug)]
 pub enum IOError {
     MissingCRLF,
-    Default,
+    // Default,
     InvalidData,
 }
 

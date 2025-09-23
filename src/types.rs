@@ -1,5 +1,6 @@
 use std::{sync::mpsc::Sender, time::Instant};
 
+#[derive(Clone)]
 pub struct Value {
     pub value: String,
     pub expires_at: Option<Instant>,
@@ -44,7 +45,7 @@ pub enum RESPValue {
     Simple(String),
     Err(String),
     Integer(i64),
-    Boolean(bool), // specific to RESP3, which i will not be supporting
+    // Boolean(bool), // specific to RESP3, which i will not be supporting
     Nil,
 
     BulkString(String),
@@ -58,7 +59,7 @@ impl RESPValue {
             RESPValue::Simple(s) => format!("+{}\r\n", s), // Generic return value
             RESPValue::Err(e) => format!("-{}\r\n", e),    // Returned if error internally
             RESPValue::Integer(i) => format!(":{}\r\n", i), // Returned after INCR/DECR, etc
-            RESPValue::Boolean(b) => format!("#{}\r\n", if *b { "t" } else { "f" }), // probably will not be using this
+            // RESPValue::Boolean(b) => format!("#{}\r\n", if *b { "t" } else { "f" }), // probably will not be using this
             RESPValue::Nil => "$-1\r\n".to_string(), // RESP Spec: "due to historical reasons"
             RESPValue::BulkString(s) => format!("${}\r\n{}\r\n", s.len(), s),
         }
