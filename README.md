@@ -7,7 +7,8 @@ A Redis clone written in Rust. Works with existing Redis clients such as `redis-
 ## Features
 - [RESP2](https://redis.io/docs/latest/develop/reference/protocol-spec/) compliant for supported commands
 - Handles multiple clients over TCP
-- Written in Rust with no external dependencies
+- Written in Rust with 0 dependencies
+- Soon: More commands, persistence
 
 ## Supported Commands
 - `SET key value`: Store a string value
