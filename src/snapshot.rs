@@ -1,14 +1,15 @@
 use crate::db::DB;
 use std::{
-    sync::{Arc, Mutex},
+    sync::{Arc, RwLock},
     thread,
 };
 
-pub fn take_snapshot(flag: Arc<Mutex<bool>>, db: Arc<Mutex<DB>>) {
+pub fn take_snapshot(flag: Arc<RwLock<bool>>, db: Arc<RwLock<DB>>) {
     thread::spawn(move || {
-        let _ = db.lock().unwrap().store.clone();
+        let _ = db.read().unwrap().store.clone();
         // does nothing atm
-        *flag.lock().unwrap() = false;
+        println!("taking snapshot (not really)");
+        *flag.write().unwrap() = false;
     });
     return;
 }

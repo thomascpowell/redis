@@ -1,7 +1,7 @@
 use std::env;
 use std::io::BufReader;
 use std::net::{TcpListener, TcpStream};
-use std::sync::Mutex;
+use std::sync::{Mutex, RwLock};
 use std::time::Duration;
 use std::{
     sync::{Arc, mpsc},
@@ -24,8 +24,8 @@ fn main() {
     let addr: String = env::args().nth(1).unwrap_or("127.0.0.1:6379".to_string());
     let input_queue: Arc<Queue<JobRequest>> = Arc::new(Queue::new());
     let listener = TcpListener::bind(addr).unwrap();
-    let updated_flag: Arc<Mutex<bool>> = Arc::new(Mutex::new(false));
-    let database: Arc<Mutex<DB>> = Arc::new(Mutex::new(DB::new()));
+    let updated_flag: Arc<RwLock<bool>> = Arc::new(RwLock::new(false));
+    let database: Arc<RwLock<DB>> = Arc::new(RwLock::new(DB::new()));
 
     // Worker Thread
     let iq = input_queue.clone();
@@ -34,9 +34,9 @@ fn main() {
     thread::spawn(move || {
         loop {
             let job = iq.wait_pop();
-            let response = db.lock().unwrap().process(&job);
+            let response = db.write().unwrap().process(&job);
             job.respond(response.value);
-            let mut flag = uf.lock().unwrap();
+            let mut flag = uf.write().unwrap();
             *flag = true;
         }
     });
@@ -47,7 +47,7 @@ fn main() {
     thread::spawn(move || {
         loop {
             thread::sleep(Duration::from_secs(30));
-            let flag = uf.lock().unwrap();
+            let flag = uf.read().unwrap();
             if *flag {
                 snapshot::take_snapshot(uf.clone(), db.clone());
             }
