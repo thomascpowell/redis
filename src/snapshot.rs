@@ -2,21 +2,14 @@ use crate::{db::DB, types::Value};
 use std::{
     fs::{self, File},
     io::{BufReader, Bytes, Read},
+    iter::Peekable,
+    str::from_utf8,
     sync::{Arc, RwLock},
     thread,
-    time::Instant,
+    time::{Duration, Instant},
 };
 
-// serializes in format:
-// 4 byte key length
-// key (string)
-//
-// 4 byte value length
-// Value.value (string)
-//
-// value of length l
-// 4 byte ttl (in seconds)
-
+// format:
 // 4 byte key len | key | 4 byte value length | value | 4 byte ttl
 
 pub fn take_snapshot(flag: Arc<RwLock<bool>>, db: Arc<RwLock<DB>>, path: String) {
@@ -55,55 +48,118 @@ pub fn serialize_value(buf: &mut Vec<u8>, v: &Value) {
     buf.extend(ttl.to_le_bytes());
 }
 
-#[derive(Debug)]
-enum ReadBuf {
-    // define the bufs than can be read into
-    // resize them after reading the length bytes
-    // key buf
-    // value buf
-}
-impl ReadBuf {
-    // define method to read stuff in
-    //   read len -> resize
-    //   read data
-
-    // define methods to interpret the bufs when full
-    // e.g. Key -> Option<String>
-    
-    // get a mutable reference to the current buf
-}
-
-// pattern: 4 byte key len | key | 4 byte value length | value | 4 byte ttl
-
 pub fn deserialize(path: &str) -> Option<DB> {
     let file = File::open(path).ok()?;
-    let source_buf = BufReader::new(file);
+    let mut res = std::collections::HashMap::new();
 
-    let res = std::collections::HashMap::new();
-    
-    {
-        // use methods from ReadBuf
-        // 1 loop = one full pattern
-        //
-        // define a buf variable, call methods, define variables
-        // e.g. buf.read_len
-        //      buf.read_data
-        //
-        // once the loop is complete (key, value are defined)
-        // update res
-        // None anywhere -> break
+    let mut source_buf = BufReader::new(file).bytes().peekable();
+    let mut read_buf = Vec::new();
+    loop {
+        match read_iteration(&mut read_buf, &mut source_buf) {
+            Ok(None) => {
+                return Some(DB { store: res });
+            }
+            Ok(Some(x)) => res.insert(x.key, x.val),
+            Err(e) => {
+                eprintln!("{:?} error deserializing", e);
+                return None;
+            }
+        };
     }
-    
-    Some(DB { store: res })
 }
 
-pub fn read_bytes<'a>(read_buf: &'a mut Vec<u8>, bytes: &mut Bytes<BufReader<File>>, number: u8) -> Option<&'a Vec<u8>> {
-    for _ in 0..number {
-        // read bytes into the buf 
-        // read_buf borrowed from ReadBuf
-        // 
-        let byte = bytes.next()?;
+#[derive(Debug)]
+pub enum ReadErr {
+    InterpretU32Failure,
+    InterpretStringFailure,
+    ReadBytesError,
+    EOFError,
+}
+
+struct ReadEntry {
+    key: String,
+    val: Value,
+}
+
+
+// TODO: wrap everything here in helper functions
+// e.g. read_u32
+fn read_iteration(
+    read_buf: &mut Vec<u8>,
+    bytes: &mut Peekable<Bytes<BufReader<File>>>,
+) -> Result<Option<ReadEntry>, ReadErr> {
+    if bytes.peek().is_none() {
+        return Ok(None);
     }
 
-    return Some(read_buf);
+    read_bytes(read_buf, bytes, 4)?;
+    let key_len = match interpret_u32(read_buf) {
+        Some(x) => x,
+        None => return Err(ReadErr::InterpretU32Failure),
+    };
+    read_buf.clear();
+    read_bytes(read_buf, bytes, key_len)?;
+    let key = match interpret_string(read_buf) {
+        Some(x) => x,
+        None => return Err(ReadErr::InterpretStringFailure),
+    };
+    read_buf.clear();
+    read_bytes(read_buf, bytes, 4)?;
+    let value_len = match interpret_u32(read_buf) {
+        Some(x) => x,
+        None => return Err(ReadErr::InterpretU32Failure),
+    };
+    read_buf.clear();
+    read_bytes(read_buf, bytes, value_len)?;
+    let value = match interpret_string(read_buf) {
+        Some(x) => x,
+        None => return Err(ReadErr::InterpretStringFailure),
+    };
+    read_buf.clear();
+    read_bytes(read_buf, bytes, 4)?;
+    let ttl = match interpret_u32(read_buf) {
+        Some(x) => x,
+        None => return Err(ReadErr::InterpretU32Failure),
+    };
+    read_buf.clear();
+
+    let expires_at = if ttl == 0 {
+        None
+    } else {
+        Some(Instant::now() + Duration::from_secs(ttl as u64))
+    };
+    let res = ReadEntry {
+        key: key,
+        val: Value {
+            value: value,
+            expires_at: expires_at,
+        },
+    };
+    Ok(Some(res))
+}
+
+fn interpret_string(read_buf: &mut Vec<u8>) -> Option<String> {
+    Some(from_utf8(read_buf).ok()?.to_owned())
+}
+
+fn interpret_u32(read_buf: &mut Vec<u8>) -> Option<u32> {
+    let bytes: [u8; 4] = read_buf.get(0..4)?.try_into().ok()?;
+    Some(u32::from_le_bytes(bytes))
+}
+
+pub fn read_bytes<'a>(
+    read_buf: &'a mut Vec<u8>,
+    bytes: &mut Peekable<Bytes<BufReader<File>>>,
+    n: u32,
+) -> Result<(), ReadErr> {
+    for _ in 0..n as usize {
+        match bytes.next() {
+            Some(Ok(byte)) => {
+                read_buf.push(byte);
+            }
+            Some(Err(_)) => return Err(ReadErr::ReadBytesError),
+            None => return Err(ReadErr::EOFError),
+        };
+    }
+    Ok(())
 }
