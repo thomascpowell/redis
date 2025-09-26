@@ -49,7 +49,7 @@ fn main() {
             thread::sleep(Duration::from_secs(30));
             let flag = uf.read().unwrap();
             if *flag {
-                snapshot::take_snapshot(uf.clone(), db.clone());
+                snapshot::take_snapshot(uf.clone(), db.clone(), "./.cache".to_owned());
             }
         }
     });
