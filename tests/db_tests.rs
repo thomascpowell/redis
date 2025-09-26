@@ -41,7 +41,7 @@ fn test_ttl() {
     );
 
     // GET after TTL
-    sleep(Duration::new(1, 1));
+    sleep(Duration::from_millis(1001));
     assert_ne!(
         db.process(&get_job_request(&get)).value,
         get_bulk_res("test")

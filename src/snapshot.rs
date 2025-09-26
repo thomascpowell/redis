@@ -10,9 +10,12 @@ use std::{
 };
 
 // format:
+// 4 byte total length
 // 4 byte key len | key | 4 byte value length | value | 4 byte ttl
 
-pub fn take_snapshot(flag: Arc<RwLock<bool>>, db: Arc<RwLock<DB>>, path: String) {
+pub fn take_snapshot(flag: Arc<RwLock<bool>>, db: Arc<RwLock<DB>>, path: &str) {
+    let full_path = env!("CARGO_MANIFEST_DIR").to_string() + path;
+    println!("{}", full_path);
     thread::spawn(move || {
         let snapshot = db.read().unwrap();
         let mut buf: Vec<u8> = Vec::new();
@@ -21,7 +24,7 @@ pub fn take_snapshot(flag: Arc<RwLock<bool>>, db: Arc<RwLock<DB>>, path: String)
             serialize_string(&mut buf, k);
             serialize_value(&mut buf, v);
         }
-        let res = fs::write(&path, buf);
+        let res = fs::write(&full_path, buf);
         if let Err(e) = res {
             eprintln!("snapshot error: {:?}", e);
         }
@@ -49,23 +52,32 @@ pub fn serialize_value(buf: &mut Vec<u8>, v: &Value) {
 }
 
 pub fn deserialize(path: &str) -> Option<DB> {
-    let file = File::open(path).ok()?;
-    let mut res = std::collections::HashMap::new();
-
+    let full_path = env!("CARGO_MANIFEST_DIR").to_string() + path;
+    let file = File::open(full_path).ok()?;
     let mut source_buf = BufReader::new(file).bytes().peekable();
+
+    let mut res = std::collections::HashMap::new();
     let mut read_buf = Vec::new();
-    loop {
+
+    // get length
+    read_bytes(&mut read_buf, &mut source_buf, 4).ok()?;
+    let total_length = interpret_u32(&mut read_buf)?;
+    read_buf.clear();
+
+    for _ in 0..total_length {
         match read_iteration(&mut read_buf, &mut source_buf) {
-            Ok(None) => {
-                return Some(DB { store: res });
-            }
             Ok(Some(x)) => res.insert(x.key, x.val),
             Err(e) => {
-                eprintln!("{:?} error deserializing", e);
+                eprintln!("{:?}: error deserializing", e);
+                return None;
+            }
+            Ok(None) => {
+                eprintln!("read_iteration returned None (what)");
                 return None;
             }
         };
     }
+    Some(DB { store: res })
 }
 
 #[derive(Debug)]
@@ -80,7 +92,6 @@ struct ReadEntry {
     key: String,
     val: Value,
 }
-
 
 // TODO: wrap everything here in helper functions
 // e.g. read_u32
