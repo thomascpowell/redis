@@ -21,7 +21,9 @@ mod snapshot;
 mod types;
 
 fn main() {
-    let addr: String = env::args().nth(1).unwrap_or("127.0.0.1:6379".to_string());
+    let mut args = env::args();
+    let addr: String = args.nth(1).unwrap_or("127.0.0.1:6379".to_string());
+    let path: String = args.nth(2).unwrap_or("../data/.cache".to_string());
     let input_queue: Arc<Queue<JobRequest>> = Arc::new(Queue::new());
     let listener = TcpListener::bind(addr).unwrap();
     let updated_flag: Arc<RwLock<bool>> = Arc::new(RwLock::new(false));
@@ -49,7 +51,7 @@ fn main() {
             thread::sleep(Duration::from_secs(30));
             let flag = uf.read().unwrap();
             if *flag {
-                snapshot::take_snapshot(uf.clone(), db.clone(), "./.cache".to_owned());
+                snapshot::take_snapshot(uf.clone(), db.clone(), path.clone());
             }
         }
     });
