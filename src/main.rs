@@ -1,7 +1,7 @@
-use std::env;
+use std::{env, fs};
 use std::io::BufReader;
 use std::net::{TcpListener, TcpStream};
-use std::sync::{Mutex, RwLock};
+use std::sync::{ RwLock};
 use std::time::Duration;
 use std::{
     sync::{Arc, mpsc},
@@ -19,15 +19,26 @@ mod db;
 mod queue;
 mod snapshot;
 mod types;
+mod utils;
 
 fn main() {
+    // args
     let mut args = env::args();
     let addr: String = args.nth(1).unwrap_or("127.0.0.1:6379".to_string());
-    let path: String = args.nth(2).unwrap_or("../data/.cache".to_string());
-    let input_queue: Arc<Queue<JobRequest>> = Arc::new(Queue::new());
+    let path: String = args.nth(2).unwrap_or("/data/cache".to_string());
+
+    // TCP listener
     let listener = TcpListener::bind(addr).unwrap();
+
+    // TODO: refactor to dirty probably
     let updated_flag: Arc<RwLock<bool>> = Arc::new(RwLock::new(false));
-    let database: Arc<RwLock<DB>> = Arc::new(RwLock::new(DB::new()));
+
+    // create database
+    let database = Arc::new(RwLock::new(DB::restore_or_new(&path)));
+
+    // input queue    
+    let input_queue: Arc<Queue<JobRequest>> = Arc::new(Queue::new());
+
 
     // Worker Thread
     let iq = input_queue.clone();

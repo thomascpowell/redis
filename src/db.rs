@@ -1,5 +1,12 @@
-use crate::types::{Command, JobRequest, JobResponse, RESPValue, Value};
-use std::time::{Duration, Instant};
+use crate::{
+    snapshot,
+    types::{Command, JobRequest, JobResponse, RESPValue, Value},
+    utils::{exists, get_full_path},
+};
+use std::{
+    fs,
+    time::{Duration, Instant},
+};
 
 pub struct DB {
     pub store: std::collections::HashMap<String, Value>,
@@ -12,6 +19,21 @@ impl DB {
     pub fn new() -> Self {
         DB {
             store: std::collections::HashMap::new(),
+        }
+    }
+
+    pub fn restore_or_new(path: &str) -> DB {
+        let full_path = get_full_path(&path);
+        let res = snapshot::deserialize(&full_path);
+        match res {
+            Some(db) => {
+                println!("restored db");
+                return db;
+            }
+            None => {
+                println!("no cache found at: {}", full_path);
+                DB::new()
+            }
         }
     }
 

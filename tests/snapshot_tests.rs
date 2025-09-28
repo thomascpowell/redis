@@ -58,10 +58,8 @@ fn test_snapshot() {
 
     }
 
-
-
     assert!(fs::exists(&full_path).is_ok());
 
-    let restored_db = snapshot::deserialize(path).unwrap();
+    let restored_db = snapshot::deserialize(&full_path).unwrap();
     assert!(restored_db.store.get(&test_key).is_some());
 }

@@ -15,7 +15,7 @@ use std::{
 
 pub fn take_snapshot(flag: Arc<RwLock<bool>>, db: Arc<RwLock<DB>>, path: &str) {
     let full_path = env!("CARGO_MANIFEST_DIR").to_string() + path;
-    println!("{}", full_path);
+    println!("caching database...");
     thread::spawn(move || {
         let snapshot = db.read().unwrap();
         let mut buf: Vec<u8> = Vec::new();
@@ -29,6 +29,7 @@ pub fn take_snapshot(flag: Arc<RwLock<bool>>, db: Arc<RwLock<DB>>, path: &str) {
             eprintln!("snapshot error: {:?}", e);
         }
         *flag.write().unwrap() = false;
+        println!("finished caching.")
     });
 }
 
@@ -38,24 +39,28 @@ pub fn serialize_string(buf: &mut Vec<u8>, s: &str) {
 }
 
 pub fn serialize_value(buf: &mut Vec<u8>, v: &Value) {
-    // can only store 132 years before overflow
+    // ttl can only store like 136 years before overflow
     // do not use this database if you operate beyond mortal timescales
+    // also it can be off by a max of however long you configure it to wait
+    // e.g. snapshot every 30 seconds -> max error 30 seconds
+    let now = Instant::now();
     let ttl = match v.expires_at {
         None => 0,
-        Some(time) => time
-            .saturating_duration_since(Instant::now())
+        Some(time) if time > now => {
+        time.saturating_duration_since(now)
             .as_secs()
-            .min(u32::MAX as u64) as u32,
+            .min(u32::MAX as u64) as u32
+        }
+        _ => return
     };
     serialize_string(buf, &v.value);
     buf.extend(ttl.to_le_bytes());
 }
 
 pub fn deserialize(path: &str) -> Option<DB> {
-    let full_path = env!("CARGO_MANIFEST_DIR").to_string() + path;
-    let file = File::open(full_path).ok()?;
-    let mut source_buf = BufReader::new(file).bytes().peekable();
 
+    let file = File::open(path).ok()?;
+    let mut source_buf = BufReader::new(file).bytes().peekable();
     let mut res = std::collections::HashMap::new();
     let mut read_buf = Vec::new();
 
