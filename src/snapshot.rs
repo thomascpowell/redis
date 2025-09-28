@@ -1,4 +1,4 @@
-use crate::{db::DB, types::Value};
+use crate::{db::DB, types::Value, utils::get_full_path};
 use std::{
     fs::{self, File},
     io::{BufReader, Bytes, Read},
@@ -13,9 +13,8 @@ use std::{
 // 4 byte total length
 // 4 byte key len | key | 4 byte value length | value | 4 byte ttl
 
-pub fn take_snapshot(flag: Arc<RwLock<bool>>, db: Arc<RwLock<DB>>, path: &str) {
-    let full_path = env!("CARGO_MANIFEST_DIR").to_string() + path;
-    println!("caching database...");
+pub fn take_snapshot(flag: Arc<RwLock<bool>>, db: Arc<RwLock<DB>>, full_path: &str) {
+    let full_path = full_path.to_string();
     thread::spawn(move || {
         let snapshot = db.read().unwrap();
         let mut buf: Vec<u8> = Vec::new();
@@ -29,7 +28,6 @@ pub fn take_snapshot(flag: Arc<RwLock<bool>>, db: Arc<RwLock<DB>>, path: &str) {
             eprintln!("snapshot error: {:?}", e);
         }
         *flag.write().unwrap() = false;
-        println!("finished caching.")
     });
 }
 
@@ -57,9 +55,9 @@ pub fn serialize_value(buf: &mut Vec<u8>, v: &Value) {
     buf.extend(ttl.to_le_bytes());
 }
 
-pub fn deserialize(path: &str) -> Option<DB> {
+pub fn deserialize(full_path: &str) -> Option<DB> {
 
-    let file = File::open(path).ok()?;
+    let file = File::open(full_path).ok()?;
     let mut source_buf = BufReader::new(file).bytes().peekable();
     let mut res = std::collections::HashMap::new();
     let mut read_buf = Vec::new();
@@ -163,7 +161,7 @@ fn interpret_u32(read_buf: &mut Vec<u8>) -> Option<u32> {
     Some(u32::from_le_bytes(bytes))
 }
 
-pub fn read_bytes<'a>(
+fn read_bytes<'a>(
     read_buf: &'a mut Vec<u8>,
     bytes: &mut Peekable<Bytes<BufReader<File>>>,
     n: u32,

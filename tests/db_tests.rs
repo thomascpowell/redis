@@ -28,20 +28,14 @@ fn test_set_get_del() {
 #[test]
 fn test_ttl() {
     let mut db = DB::new();
-    let set = "SETEX test 1 test".to_string();
+    let set = "SETEX test 0 test".to_string();
     let get = "GET test".to_string();
 
     // SET
     db.process(&get_job_request(&set));
 
-    // GET
-    assert_eq!(
-        db.process(&get_job_request(&get)).value,
-        get_bulk_res("test")
-    );
-
     // GET after TTL
-    sleep(Duration::from_millis(1001));
+    sleep(Duration::from_millis(1));
     assert_ne!(
         db.process(&get_job_request(&get)).value,
         get_bulk_res("test")

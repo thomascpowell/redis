@@ -13,6 +13,7 @@ use types::{JobRequest, JobResponse};
 use crate::client::Client;
 use crate::db::DB;
 use crate::queue::Queue;
+use crate::utils::get_full_path;
 
 mod client;
 mod db;
@@ -62,7 +63,7 @@ fn main() {
             thread::sleep(Duration::from_secs(30));
             let flag = uf.read().unwrap();
             if *flag {
-                snapshot::take_snapshot(uf.clone(), db.clone(), &path);
+                snapshot::take_snapshot(uf.clone(), db.clone(), &get_full_path(&path))
             }
         }
     });

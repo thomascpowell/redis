@@ -1,5 +1,5 @@
 use std::{
-    fs::{self, File},
+    fs::{self},
     sync::{Arc, RwLock},
     thread,
     time::Duration,
@@ -8,7 +8,7 @@ use std::{
 use redis::{
     db::DB,
     snapshot::{self},
-    types::Value,
+    types::Value, utils::{exists, get_full_path, get_temp_full_path},
 };
 
 #[test]
@@ -22,12 +22,13 @@ fn test_snapshot() {
         expires_at: None,
     };
 
-    let path = "/data/test_cache";
-    let full_path = env!("CARGO_MANIFEST_DIR").to_string() + path;
-
+    // let path = "/data/test_cache";
+    // let full_path = get_full_path(path);
+    let full_path = get_temp_full_path("temp_cache");
+    
     // delete any existing test_cache
     let _ = fs::remove_file(&full_path);
-    assert!(fs::exists(&full_path).ok().unwrap() == false);
+    assert!(exists(&full_path)== false);
 
     // directly write to db
     database
@@ -38,7 +39,7 @@ fn test_snapshot() {
 
     // take the snapshot
     let f = flag.clone();
-    snapshot::take_snapshot(f, database, path);
+    snapshot::take_snapshot(f, database, &full_path);
     
     // check if take_snapshot is done
     let mut retries = 0;
