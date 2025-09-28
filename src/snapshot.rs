@@ -1,4 +1,4 @@
-use crate::{db::DB, types::Value, utils::get_full_path};
+use crate::{db::DB, types::Value};
 use std::{
     fs::{self, File},
     io::{BufReader, Bytes, Read},
@@ -8,6 +8,9 @@ use std::{
     thread,
     time::{Duration, Instant},
 };
+
+// this was far too long
+type FileBytes = Peekable<Bytes<BufReader<File>>>;
 
 // format:
 // 4 byte total length
@@ -31,51 +34,21 @@ pub fn take_snapshot(flag: Arc<RwLock<bool>>, db: Arc<RwLock<DB>>, full_path: &s
     });
 }
 
-pub fn serialize_string(buf: &mut Vec<u8>, s: &str) {
-    buf.extend(&(s.len() as u32).to_le_bytes()); // 4-byte length prefix
-    buf.extend(s.as_bytes());
-}
-
-pub fn serialize_value(buf: &mut Vec<u8>, v: &Value) {
-    // ttl can only store like 136 years before overflow
-    // do not use this database if you operate beyond mortal timescales
-    // also it can be off by a max of however long you configure it to wait
-    // e.g. snapshot every 30 seconds -> max error 30 seconds
-    let now = Instant::now();
-    let ttl = match v.expires_at {
-        None => 0,
-        Some(time) if time > now => {
-        time.saturating_duration_since(now)
-            .as_secs()
-            .min(u32::MAX as u64) as u32
-        }
-        _ => return
-    };
-    serialize_string(buf, &v.value);
-    buf.extend(ttl.to_le_bytes());
-}
-
 pub fn deserialize(full_path: &str) -> Option<DB> {
-
     let file = File::open(full_path).ok()?;
     let mut source_buf = BufReader::new(file).bytes().peekable();
     let mut res = std::collections::HashMap::new();
     let mut read_buf = Vec::new();
-
     // get length
     read_bytes(&mut read_buf, &mut source_buf, 4).ok()?;
     let total_length = interpret_u32(&mut read_buf)?;
     read_buf.clear();
-
+    // read rest
     for _ in 0..total_length {
         match read_iteration(&mut read_buf, &mut source_buf) {
-            Ok(Some(x)) => res.insert(x.key, x.val),
+            Ok(x) => res.insert(x.key, x.val),
             Err(e) => {
                 eprintln!("{:?}: error deserializing", e);
-                return None;
-            }
-            Ok(None) => {
-                eprintln!("read_iteration returned None (what)");
                 return None;
             }
         };
@@ -96,46 +69,59 @@ struct ReadEntry {
     val: Value,
 }
 
-// TODO: wrap everything here in helper functions
-// e.g. read_u32
-fn read_iteration(
-    read_buf: &mut Vec<u8>,
-    bytes: &mut Peekable<Bytes<BufReader<File>>>,
-) -> Result<Option<ReadEntry>, ReadErr> {
-    if bytes.peek().is_none() {
-        return Ok(None);
-    }
+fn serialize_string(buf: &mut Vec<u8>, s: &str) {
+    buf.extend(&(s.len() as u32).to_le_bytes()); // 4-byte length prefix
+    buf.extend(s.as_bytes());
+}
 
-    read_bytes(read_buf, bytes, 4)?;
-    let key_len = match interpret_u32(read_buf) {
-        Some(x) => x,
-        None => return Err(ReadErr::InterpretU32Failure),
+fn serialize_value(buf: &mut Vec<u8>, v: &Value) {
+    // ttl can only store like 136 years before overflow
+    // do not use this database if you operate beyond mortal timescales
+    // also it can be off by a max of however long you configure it to wait
+    // e.g. snapshot every 30 seconds -> max error 30 seconds
+    let now = Instant::now();
+    let ttl = match v.expires_at {
+        None => 0,
+        Some(time) if time > now => time
+            .saturating_duration_since(now)
+            .as_secs()
+            .min(u32::MAX as u64) as u32,
+        _ => return,
     };
+    serialize_string(buf, &v.value);
+    buf.extend(ttl.to_le_bytes());
+}
+
+fn read_u32(read_buf: &mut Vec<u8>, bytes: &mut FileBytes) -> Result<u32, ReadErr> {
+    read_bytes(read_buf, bytes, 4).ok();
+    let res = interpret_u32(read_buf);
     read_buf.clear();
-    read_bytes(read_buf, bytes, key_len)?;
-    let key = match interpret_string(read_buf) {
-        Some(x) => x,
+    match res {
+        Some(x) => Ok(x),
+        None => return Err(ReadErr::InterpretU32Failure),
+    }
+}
+
+fn read_string(
+    string_len: u32,
+    read_buf: &mut Vec<u8>,
+    bytes: &mut FileBytes,
+) -> Result<String, ReadErr> {
+    read_bytes(read_buf, bytes, string_len).ok();
+    let res = interpret_string(read_buf);
+    read_buf.clear();
+    match res {
+        Some(x) => Ok(x),
         None => return Err(ReadErr::InterpretStringFailure),
-    };
-    read_buf.clear();
-    read_bytes(read_buf, bytes, 4)?;
-    let value_len = match interpret_u32(read_buf) {
-        Some(x) => x,
-        None => return Err(ReadErr::InterpretU32Failure),
-    };
-    read_buf.clear();
-    read_bytes(read_buf, bytes, value_len)?;
-    let value = match interpret_string(read_buf) {
-        Some(x) => x,
-        None => return Err(ReadErr::InterpretStringFailure),
-    };
-    read_buf.clear();
-    read_bytes(read_buf, bytes, 4)?;
-    let ttl = match interpret_u32(read_buf) {
-        Some(x) => x,
-        None => return Err(ReadErr::InterpretU32Failure),
-    };
-    read_buf.clear();
+    }
+}
+
+fn read_iteration(read_buf: &mut Vec<u8>, bytes: &mut FileBytes) -> Result<ReadEntry, ReadErr> {
+    let key_len = read_u32(read_buf, bytes)?;
+    let key = read_string(key_len, read_buf, bytes)?;
+    let value_len = read_u32(read_buf, bytes)?;
+    let value = read_string(value_len, read_buf, bytes)?;
+    let ttl = read_u32(read_buf, bytes)?;
 
     let expires_at = if ttl == 0 {
         None
@@ -149,7 +135,7 @@ fn read_iteration(
             expires_at: expires_at,
         },
     };
-    Ok(Some(res))
+    Ok(res)
 }
 
 fn interpret_string(read_buf: &mut Vec<u8>) -> Option<String> {
@@ -161,11 +147,7 @@ fn interpret_u32(read_buf: &mut Vec<u8>) -> Option<u32> {
     Some(u32::from_le_bytes(bytes))
 }
 
-fn read_bytes<'a>(
-    read_buf: &'a mut Vec<u8>,
-    bytes: &mut Peekable<Bytes<BufReader<File>>>,
-    n: u32,
-) -> Result<(), ReadErr> {
+fn read_bytes<'a>(read_buf: &'a mut Vec<u8>, bytes: &mut FileBytes, n: u32) -> Result<(), ReadErr> {
     for _ in 0..n as usize {
         match bytes.next() {
             Some(Ok(byte)) => {
