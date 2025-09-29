@@ -1,5 +1,5 @@
 use db_utils::*;
-use redis::{db::DB, types::RESPValue};
+use redis::db::DB;
 use std::{thread::sleep, time::Duration};
 
 mod db_utils;

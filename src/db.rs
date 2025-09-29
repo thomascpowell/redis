@@ -119,7 +119,6 @@ impl DB {
         self.store.remove_entry(key);
     }
 
-    // TODO: Untested
     fn append_op(&mut self, key: &str, addition: &str) -> i64 {
         let new_value: String;
         let new_expires_at: Option<Instant>;

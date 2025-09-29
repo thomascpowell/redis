@@ -19,16 +19,20 @@ mod types;
 mod utils;
 
 fn main() {
-    // args
+    // TODO: make args better
     let mut args = env::args();
     let addr: String = args.nth(1).unwrap_or("127.0.0.1:6379".to_string());
     let path: String = args.nth(2).unwrap_or("/data/cache".to_string());
+    let snapshot_interval = match args.nth(3) {
+        None => 30,
+        Some(i) => u64::from_str_radix(&i, 10).unwrap_or(30)
+    };
 
     // TCP listener
     let listener = TcpListener::bind(addr).unwrap();
 
-    // TODO: refactor to dirty probably
-    let updated_flag: Arc<RwLock<bool>> = Arc::new(RwLock::new(false));
+    // tracks if the db has been updated
+    let dirty: Arc<RwLock<bool>> = Arc::new(RwLock::new(false));
 
     // create database
     let database = Arc::new(RwLock::new(DB::restore_or_new(&path)));
@@ -38,7 +42,7 @@ fn main() {
 
     // Worker Thread
     let iq = input_queue.clone();
-    let uf = updated_flag.clone();
+    let uf = dirty.clone();
     let db = database.clone();
     thread::spawn(move || {
         loop {
@@ -51,11 +55,11 @@ fn main() {
     });
 
     // IO Watcher Thread
-    let uf = updated_flag.clone();
+    let uf = dirty.clone();
     let db = database.clone();
     thread::spawn(move || {
         loop {
-            thread::sleep(Duration::from_secs(30));
+            thread::sleep(Duration::from_secs(snapshot_interval));
             let flag = uf.read().unwrap();
             if *flag {
                 snapshot::take_snapshot(uf.clone(), db.clone(), &get_full_path(&path))
