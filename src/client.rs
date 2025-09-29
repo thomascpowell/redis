@@ -22,10 +22,23 @@ pub enum IOError {
     InvalidData,
 }
 
+pub fn handle_client(stream: TcpStream, input_queue: Arc<Queue<JobRequest>>) {
+    let (tx, rx) = mpsc::channel::<JobResponse>();
+    let reader = BufReader::new(stream.try_clone().unwrap());
+    let mut client = Client {
+        stream,
+        reader,
+        input_queue,
+        tx,
+        rx,
+    };
+    client.run();
+}
+
 impl Client {
     pub fn run(&mut self) {
         loop {
-            let should_continue: bool = self.handle_input();
+            let should_continue = self.handle_input();
             if !should_continue {
                 break;
             }
@@ -64,7 +77,6 @@ impl Client {
     fn get_valid_io(&mut self) -> Result<Vec<String>, IOError> {
         let mut tokens: Vec<String> = Vec::new();
         let mut line = String::new();
-
         // read overall length
         self.get_line(&mut line)?;
         let command_len: usize = line
@@ -86,14 +98,12 @@ impl Client {
                 .map_err(|_| IOError::InvalidData)?;
             let mut token_buf = vec![0; token_len];
             self.get_exact(&mut token_buf)?;
-
             // read crlf
             let mut crlf = [0; 2];
             self.get_exact(&mut crlf)?;
             if &crlf != b"\r\n" {
                 return Err(IOError::MissingCRLF);
             }
-
             // store the token
             let token = String::from_utf8(token_buf).map_err(|_| IOError::InvalidData)?;
             tokens.push(token);

@@ -1,16 +1,12 @@
-use std::{env, fs};
-use std::io::BufReader;
-use std::net::{TcpListener, TcpStream};
-use std::sync::{ RwLock};
+use std::env;
+use std::net::TcpListener;
+use std::sync::RwLock;
 use std::time::Duration;
-use std::{
-    sync::{Arc, mpsc},
-    thread,
-};
+use std::{sync::Arc, thread};
 
-use types::{JobRequest, JobResponse};
+use types::JobRequest;
 
-use crate::client::Client;
+use crate::client::handle_client;
 use crate::db::DB;
 use crate::queue::Queue;
 use crate::utils::get_full_path;
@@ -37,9 +33,8 @@ fn main() {
     // create database
     let database = Arc::new(RwLock::new(DB::restore_or_new(&path)));
 
-    // input queue    
+    // input queue
     let input_queue: Arc<Queue<JobRequest>> = Arc::new(Queue::new());
-
 
     // Worker Thread
     let iq = input_queue.clone();
@@ -74,17 +69,4 @@ fn main() {
         let stream = stream.unwrap();
         thread::spawn(move || handle_client(stream, iq));
     }
-}
-
-fn handle_client(stream: TcpStream, input_queue: Arc<Queue<JobRequest>>) {
-    let (tx, rx) = mpsc::channel::<JobResponse>();
-    let reader = BufReader::new(stream.try_clone().unwrap());
-    let mut client = Client {
-        stream,
-        reader,
-        input_queue,
-        tx,
-        rx,
-    };
-    client.run();
 }
