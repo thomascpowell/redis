@@ -1,6 +1,6 @@
-use redis::db::DB;
-use std::{thread::sleep, time::Duration};
 use db_utils::*;
+use redis::{db::DB, types::RESPValue};
+use std::{thread::sleep, time::Duration};
 
 mod db_utils;
 
@@ -16,7 +16,7 @@ fn test_set_get_del() {
     assert_eq!(db.store.len(), 1);
     assert_eq!(
         db.process(&get_job_request(&get)).value, // process a test JobRequest
-        get_bulk_res("test")                        // compare it to a test RESP string
+        get_bulk_res("test")                      // compare it to a test RESP string
     );
 
     // DEL
@@ -99,4 +99,18 @@ fn test_invalid_incr_decr() {
     db.process(cmd1);
     // INCR should error
     assert!(db.process(cmd2).value.starts_with("-"),);
+}
+
+#[test]
+fn test_append() {
+    let mut db = DB::new();
+    let set = "set test ha".to_string();
+    let append = "append test lf".to_string();
+    let get = "get test".to_string();
+    let cmd1 = &get_job_request(&set);
+    let cmd2 = &get_job_request(&append);
+    let cmd3 = &get_job_request(&get);
+    db.process(cmd1);
+    assert_eq!(db.process(cmd2).value, get_int_res(4));
+    assert_eq!(db.process(cmd3).value, get_bulk_res("half"));
 }

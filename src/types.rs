@@ -39,6 +39,10 @@ pub enum Command<'a> {
     Persist {
         key: &'a str,
     },
+    Append {
+        key: &'a str,
+        value: &'a str,
+    }
 }
 
 pub enum RESPValue {
@@ -47,9 +51,8 @@ pub enum RESPValue {
     Integer(i64),
     // Boolean(bool), // specific to RESP3, which i will not be supporting
     Nil,
-
     BulkString(String),
-    // Array(String), // would be a type here, but commands that return this are not supported
+    // Array(String), // would be a type here, but commands that return this are not supported YET
 }
 
 impl RESPValue {

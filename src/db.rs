@@ -85,7 +85,12 @@ impl DB {
             Command::TTL { key } => {
                 let v = self.ttl_op(key);
                 RESPValue::Integer(v)
-            } // _ => RESPValue::Err("not implemented".to_string()),
+            }
+            Command::Append { key, value } => {
+                let v = self.append_op(key, value);
+                RESPValue::Integer(v)
+            }
+            _ => RESPValue::Err("not implemented".to_string()),
         }
     }
 }
@@ -112,6 +117,34 @@ impl DB {
 
     fn del_op(&mut self, key: &str) {
         self.store.remove_entry(key);
+    }
+
+    // TODO: Untested
+    fn append_op(&mut self, key: &str, addition: &str) -> i64 {
+        let new_value: String;
+        let new_expires_at: Option<Instant>;
+        match self.store.get(key) {
+            Some(e) if ttl_is_expired(e.expires_at) => {
+                self.del_op(key);
+                new_value = addition.to_string();
+                new_expires_at = None;
+            }
+            Some(e) => {
+                new_value = e.value.clone() + addition;
+                new_expires_at = e.expires_at;
+            }
+            None => {
+                new_value = addition.to_string();
+                new_expires_at = None;
+            }
+        };
+        let entry = Value {
+            value: new_value,
+            expires_at: new_expires_at,
+        };
+        let len = entry.value.len() as i64;
+        self.store.insert(key.to_string(), entry);
+        return len;
     }
 
     fn get_op(&mut self, key: &str) -> Option<String> {
@@ -238,6 +271,7 @@ fn parse(tokens: &Vec<String>) -> Option<Command<'_>> {
             key,
             ttl: ttl.parse::<u64>().ok()?,
         }),
+        [_, key, value] if cmd == "APPEND" => Some(Command::Append { key, value }),
         [_, key] if cmd == "PERSIST" => Some(Command::Persist { key }),
         [_, key] if cmd == "TTL" => Some(Command::TTL { key }),
         [_, key] if cmd == "GET" => Some(Command::Get { key }),
