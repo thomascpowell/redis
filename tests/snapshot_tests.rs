@@ -5,10 +5,13 @@ use std::{
     time::Duration,
 };
 
+mod db_utils;
+use {db_utils::exists, db_utils::get_temp_full_path};
+
 use redis::{
     db::DB,
     snapshot::{self},
-    types::Value, utils::{exists, get_full_path, get_temp_full_path},
+    types::Value,
 };
 
 #[test]
@@ -25,10 +28,10 @@ fn test_snapshot() {
     // let path = "/data/test_cache";
     // let full_path = get_full_path(path);
     let full_path = get_temp_full_path("temp_cache");
-    
+
     // delete any existing test_cache
     let _ = fs::remove_file(&full_path);
-    assert!(exists(&full_path)== false);
+    assert!(exists(&full_path) == false);
 
     // directly write to db
     database
@@ -40,11 +43,11 @@ fn test_snapshot() {
     // take the snapshot
     let f = flag.clone();
     snapshot::take_snapshot(f, database, &full_path);
-    
+
     // check if take_snapshot is done
     let mut retries = 0;
     loop {
-        retries+=1;
+        retries += 1;
         thread::sleep(Duration::from_millis(100));
         let f = flag.read().unwrap();
         println!("is snapshot done?");
@@ -56,7 +59,6 @@ fn test_snapshot() {
         if retries > 3 {
             panic!("snapshot took too long")
         }
-
     }
 
     assert!(fs::exists(&full_path).is_ok());

@@ -30,6 +30,7 @@ pub fn take_snapshot(flag: Arc<RwLock<bool>>, db: Arc<RwLock<DB>>, full_path: &s
         if let Err(e) = res {
             eprintln!("snapshot error: {:?}", e);
         }
+        println!("made snapshot");
         *flag.write().unwrap() = false;
     });
 }

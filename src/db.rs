@@ -1,10 +1,9 @@
 use crate::{
     snapshot,
     types::{Command, JobRequest, JobResponse, RESPValue, Value},
-    utils::{exists, get_full_path},
+    utils::{get_full_path},
 };
 use std::{
-    fs,
     time::{Duration, Instant},
 };
 
