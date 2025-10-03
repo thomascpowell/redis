@@ -1,11 +1,10 @@
 # "Redis"
-
 A Redis clone written in Rust. Works with existing Redis clients such as `redis-cli` and `go-redis`.
 
 [![tests](https://github.com/thomascpowell/redis/actions/workflows/test.yml/badge.svg)](https://github.com/thomascpowell/redis/actions/workflows/test.yml)
 
 ## Features
-- [RESP2](https://redis.io/docs/latest/develop/reference/protocol-spec/) compliant for supported commands
+- [RESP](https://redis.io/docs/latest/develop/reference/protocol-spec/) compliant for supported commands
 - Handles multiple clients over TCP
 - Automatic persistence with binary snapshots
 - Written in Rust with no dependencies
@@ -23,9 +22,17 @@ A Redis clone written in Rust. Works with existing Redis clients such as `redis-
 - `PING`: Health check
 
 ## Usage
+- This _can_ be a drop-in replacement for Redis (don't)
+- Example usage in a fullstack project can be found [here](https://github.com/thomascpowell/drive.git)
+- Common commands and args shown below
 ```sh
 # Run (defaults: 127.0.0.1:6379)
 cargo run <ADDR>:<PORT>
+```
+
+```sh
+# Advanced (defaults: /data/cache and 30)
+cargo run <ADDR>:<PORT> <PATH> <INTERVAL>
 ```
 
 ```sh
